@@ -71,6 +71,13 @@
   (get-region (-> image :file atlas-file)
               (-> image :rect)))
 
+(defonce sprites (atom nil))
+
+(defn sprite->region
+  [sprite]
+  (when-let [[file rect] (get @sprites sprite)]
+    (get-region file rect)))
+
 (defonce batch (atom nil))
 
 (defonce cam (atom nil))
