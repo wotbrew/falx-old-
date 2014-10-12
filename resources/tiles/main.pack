@@ -1,0 +1,117 @@
+
+main.png
+format: RGBA8888
+filter: Nearest,Nearest
+repeat: none
+Misc
+  rotate: false
+  xy: 1, 647
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+Skill
+  rotate: false
+  xy: 1, 389
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+Spell
+  rotate: false
+  xy: 259, 647
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+Status
+  rotate: false
+  xy: 1, 131
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+Weapons
+  rotate: false
+  xy: 259, 389
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+Gui
+  rotate: false
+  xy: 517, 839
+  size: 384, 64
+  orig: 384, 64
+  offset: 0, 0
+  index: -1
+Features
+  rotate: false
+  xy: 1, 1
+  size: 256, 128
+  orig: 256, 128
+  offset: 0, 0
+  index: -1
+CastleDungeon
+  rotate: false
+  xy: 517, 773
+  size: 288, 64
+  orig: 288, 64
+  offset: 0, 0
+  index: -1
+Decorations1
+  rotate: false
+  xy: 259, 259
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+Dwarf
+  rotate: false
+  xy: 517, 643
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+Human
+  rotate: false
+  xy: 259, 129
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+Missiles
+  rotate: false
+  xy: 517, 513
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+Mouse
+  rotate: false
+  xy: 647, 643
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+Armour
+  rotate: false
+  xy: 389, 259
+  size: 64, 128
+  orig: 64, 128
+  offset: 0, 0
+  index: -1
+Goblins
+  rotate: false
+  xy: 647, 513
+  size: 64, 128
+  orig: 64, 128
+  offset: 0, 0
+  index: -1
+Stat
+  rotate: false
+  xy: 903, 839
+  size: 96, 64
+  orig: 96, 64
+  offset: 0, 0
+  index: -1
