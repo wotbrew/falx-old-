@@ -35,12 +35,10 @@
                              (apply-commands commands))))))
 
 (defn gresize
-  [x y]
-  )
+  [x y])
 
 (defn gcreate
-  []
-  )
+  [])
 
 (def listener
   (proxy

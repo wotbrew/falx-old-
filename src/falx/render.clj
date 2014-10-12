@@ -13,7 +13,8 @@
   [m [wid slice :as layer]]
   (doseq [e (by-attr m :layer layer)
           :let [[x y] (pt m e)
-                region (attr m e :image)]
+                region (or (attr m e :image)
+                           (attr m e :sprite))]
           :when (and x y region)]
     (draw-region! region
                   (int (* x 32))
@@ -24,7 +25,8 @@
 (defn render-world!
   [m wid]
   (render-layer! m (tuple wid :base))
-  (render-layer! m (tuple wid :decor)))
+  (render-layer! m (tuple wid :decor))
+  (render-layer! m (tuple wid :object)))
 
 (defn render-screen!
   [m])

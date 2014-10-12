@@ -233,7 +233,6 @@
   [m att f & args]
   (reduce #(apply update-attr %1 %2 att f args) m (with-attr m att)))
 
-
 (defn create
   [m attrs]
   (let [id (next-id m)
@@ -257,7 +256,9 @@
 
   (def tgame (create-world nil tmap))
   "Create regions for all the :image entities"
-  (def tgame (update-attrs tgame :image state/image->region)))
+  (def tgame (update-attrs tgame :image state/image->region))
+  "Create regions for all the :sprite entities"
+  (def tgame (update-attr tgame :sprite state/sprite->region)))
 
 ;;query
 

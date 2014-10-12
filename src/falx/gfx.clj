@@ -16,20 +16,6 @@
   (when *batch*
     (.end *batch*)))
 
-(defn clear!
-  []
-  (. Gdx/gl glClearColor 0 0 0 0)
-  (. Gdx/gl glClear GL20/GL_COLOR_BUFFER_BIT))
-
-(defn draw-region!
-  ([^TextureRegion region x y w h]
-   (.draw *batch* region
-          ^float x
-          ^float y
-          ^float w
-          ^float h)))
-
-
 (defn set-cam!
   [^OrthographicCamera cam]
   (.setProjectionMatrix *batch* (.combined cam)))
@@ -51,3 +37,16 @@
          ~@forms)
        (finally
          (end!)))))
+
+(defn clear!
+  []
+  (. Gdx/gl glClearColor 0 0 0 0)
+  (. Gdx/gl glClear GL20/GL_COLOR_BUFFER_BIT))
+
+(defn draw-region!
+  ([^TextureRegion region x y w h]
+   (.draw *batch* region
+          ^float x
+          ^float y
+          ^float w
+          ^float h)))

@@ -19,14 +19,22 @@
 (defn cam!
   []
   (println "Creating camera")
-  (reset! state/cam (cam/camera 1024 768)))
+  (reset! state/cam (cam/camera 1024 768))
+  (state/on-renderer (cam/move! @state/cam 0 0)))
+
+(defn sprites!
+  []
+  (println "Creating sprites")
+  (reset! state/sprites (io/edn "resources/tiles/sprites.edn"))
+  nil)
 
 (defn game!
   []
   (println "Creating game")
   (let [tmap (load-map "test-resources/test-map.json")
-        game (create-world nil tmap)
-        game (update-attrs game :image state/image->region)]
+        game (-> (create-world nil tmap)
+                 (update-attrs :image state/image->region)
+                 (update-attrs :sprite state/sprite->region))]
     (reset! state/game game)
     nil))
 
@@ -35,4 +43,5 @@
   (atlas!)
   (batch!)
   (cam!)
+  (sprites!)
   (game!))

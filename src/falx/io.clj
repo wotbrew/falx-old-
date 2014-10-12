@@ -19,6 +19,5 @@
 (defn edn
   [file]
   (println "loading edn..." file)
-  (with-open [file (io/reader file)]
-    (edn/read file)))
+  (edn/read-string (slurp file)))
 
