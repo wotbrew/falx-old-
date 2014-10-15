@@ -68,3 +68,19 @@
          (update 0 + x)
          (update 1 + y))
      (tuple x y))))
+
+(defn north?
+  [[x y] [x2 y2]]
+  (pos? (- y y2)))
+
+(defn west?
+  [[x y] [x2 y2]]
+  (pos? (- x x2)))
+
+(defn south?
+  [[x y] [x2 y2]]
+  (neg? (- y y2)))
+
+(defn east?
+  [[x y] [x2 y2]]
+  (neg? (- x x2)))

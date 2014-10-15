@@ -9,12 +9,16 @@
 
 (defmulti render-layer! (fn [m [wid slice]] slice))
 
+(defn find-region
+  [m e]
+  (or (attr m e :image)
+      (attr m e :sprite)))
+
 (defmethod render-layer! :default
   [m [wid slice :as layer]]
   (doseq [e (by-attr m :layer layer)
           :let [[x y] (pt m e)
-                region (or (attr m e :image)
-                           (attr m e :sprite))]
+                region (find-region m e)]
           :when (and x y region)]
     (draw-region! region
                   (int (* x 32))
@@ -26,7 +30,8 @@
   [m wid]
   (render-layer! m (tuple wid :base))
   (render-layer! m (tuple wid :decor))
-  (render-layer! m (tuple wid :object)))
+  (render-layer! m (tuple wid :object))
+  (render-layer! m (tuple wid :creature)))
 
 (defn render-screen!
   [m])

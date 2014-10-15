@@ -175,6 +175,43 @@
          "width":32,
          "x":0,
          "y":0
+        }, 
+        {
+         "height":32,
+         "name":"creature",
+         "objects":[
+                {
+                 "height":32,
+                 "name":"goblin",
+                 "properties":
+                    {
+                     "sprite":":goblin-slave"
+                    },
+                 "type":":creature",
+                 "visible":true,
+                 "width":32,
+                 "x":608,
+                 "y":576
+                }, 
+                {
+                 "height":0,
+                 "name":"",
+                 "properties":
+                    {
+
+                    },
+                 "type":"",
+                 "visible":true,
+                 "width":32,
+                 "x":608,
+                 "y":576
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "width":32,
+         "x":0,
+         "y":0
         }],
  "orientation":"orthogonal",
  "properties":

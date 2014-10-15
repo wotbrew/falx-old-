@@ -145,11 +145,15 @@
   [att]
   (fn [m value] (by-attr m att value)))
 
+(defn flagfn
+  [att]
+  (fn [m] (by-attr m att true)))
+
 (defn with-attr
   [m att]
   (-> m :attr-ae (get att)))
 
-(def ave? #{:pos :world :layer :type})
+(def ave? #{:pos :world :layer :type :player?})
 (def ae? #{:sprite :image})
 (def vae? #{})
 
@@ -233,12 +237,28 @@
   [m att f & args]
   (reduce #(apply update-attr %1 %2 att f args) m (with-attr m att)))
 
-(defn create
+(defn- create*
   [m attrs]
   (let [id (next-id m)
         m (inc-id m)]
     (-> (set-attr m id :id id)
         (set-attrs id attrs))))
+
+(defmulti create (fn [m attrs] (:type attrs)))
+
+(defmethod create :default
+  [m attrs]
+  (create* m attrs))
+
+(defmethod create :creature
+  [m attrs]
+  (create* m (assoc attrs
+               :solid? true)))
+
+(defn create-pair
+  [m attrs]
+  [(create m attrs) (next-id m)])
+
 
 (defn create-world
   [m tiled-map]
@@ -249,6 +269,7 @@
                (-> (assoc-in o [:pos 0] id)
                    (assoc-in [:layer 0] id)))]
     (reduce create m objs)))
+
 
 (comment
   "Create the initial map like this"
@@ -289,6 +310,20 @@
 (def at
   "Get the position triple (world, x, y) for the given id"
   (by-attrfn :pos))
+
+(defn type=
+  [m id type]
+  (= type (attr m id :type)))
+
+(def solid? (attrfn :solid?))
+
+(defn creature?
+  [m id]
+  (type= m id :creature))
+
+(def player? (attrfn :player?))
+
+(def players (flagfn :player?))
 
 ;;commands
 

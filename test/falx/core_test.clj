@@ -1,6 +1,7 @@
 (ns falx.core-test
   (:require [clojure.test :refer :all]
-            [falx.core :refer :all]))
+            [falx.core :refer :all]
+            [falx.util :refer :all]))
 
 (deftest test-ids
   (testing "I can get the next id of nil as 0"
@@ -82,4 +83,29 @@
       (testing "2 doors"
         (is (= (count (by-attr m :type :door)))))
       (testing "2 transition cells"
-        (is (= (count (by-attr m :type :transition))))))))
+        (is (= (count (by-attr m :type :transition)))))
+      (testing "1 creature"
+        (is (= (count (by-attr m :type :creature))))))))
+
+(deftest test-camera
+  (let [cam [0 0]
+        m {:cam cam :delta 1}]
+    (testing "If I moving the camera should respond correctly where it was (y is inverted)"
+      (is (south? cam (:cam (apply-command m :cam-up))))
+      (is (west? cam (:cam (apply-command m :cam-left))))
+      (is (east? cam (:cam (apply-command m :cam-right))))
+      (is (north? cam (:cam (apply-command m :cam-down)))))))
+
+(deftest test-create-creature
+  (let [m nil
+        [m id] (create-pair m {:type :creature})]
+    (testing "Lets test some basic properties of an empty creature"
+      (is (type= m id :creature))
+      (is (creature? m id))
+      (is (solid? m id)))
+    (testing "If I make a player, the player? fn behaves correctly and is in the players set"
+      (is (empty? (players m)) "just double check there aren't already players :)")
+      (let [[m id] (create-pair m {:type :creature
+                                   :player? true})]
+        (is (player? m id))
+        (is (contains? (players m) id))))))
