@@ -9,7 +9,7 @@
             [falx.io :as io]
             [falx.state :as state]))
 
-;;cache
+;;tiled-map
 
 (defn name-map
   [m file]
@@ -79,12 +79,9 @@
       (name-map file-name)
       size-map))
 
-(defn map-stream
+(defn map-stream 
   [m]
   (concat (tiles m) (objects m)))
-
-
-
 
 (comment
   "load a map"
@@ -101,7 +98,6 @@
 
   "you can create a stream of all the objects"
   (def tstream (map-stream tmap)))
-
 
 
 ;;helper
@@ -134,16 +130,27 @@
   [m att value]
   (-> m :attr-ave (get att) (get value)))
 
-
 (defn attrfn
   [att]
   (fn
     ([m id else] (attr m id att else))
     ([m id] (attr m id att))))
 
+(defmacro defattr
+  ([sym doc att]
+     `(def ~sym ~doc (attrfn ~att)))
+  ([sym doc]
+     `(defattr ~sym ~doc ~(keyword (name sym))))
+  ([sym]
+     `(defattr ~sym ~(str "attribute " (name sym)))))
+
 (defn by-attrfn
   [att]
   (fn [m value] (by-attr m att value)))
+
+(defmacro defby-attr
+  ([sym doc att]
+     `(def ~sym ~doc (by-attrfn ~att))))
 
 (defn flagfn
   [att]
@@ -154,7 +161,9 @@
   (-> m :attr-ae (get att)))
 
 (def ave? #{:pos :world :layer :type :player?})
+
 (def ae? #{:sprite :image})
+
 (def vae? #{})
 
 (defn index-ave
@@ -283,17 +292,11 @@
 
 ;;query
 
-(def world
-  "Get the world of the "
-  (attrfn :world))
+(defattr world "Get the entities world attribute")
 
-(def by-world
-  "Get all the entities existing on the given world"
-  (by-attrfn :world))
+(defby-attr by-world "Get all the entities existing on the given world" :world)
 
-(def pos
-  "Get the pos triple for the given id"
-  (attrfn :pos))
+(defattr pos "Get the pos triple for the given id")
 
 (defn positions
   "Get all the positions (pos triples) for the given world id `wid`"
@@ -303,25 +306,21 @@
           y (range h)]
       (tuple wid x y))))
 
-(def pt
-  "Get the pt (x, y) for the given id"
-  (attrfn :pt))
+(defattr pt "Get the pt (x, y) for the given id")
 
-(def at
-  "Get the position triple (world, x, y) for the given id"
-  (by-attrfn :pos))
+(defby-attr at "Get the set of entities at the position" :pos)
+
+(defattr solid? "Is the entity solid?")
+
+(defattr player? "Is the entity a player?")
 
 (defn type=
   [m id type]
   (= type (attr m id :type)))
 
-(def solid? (attrfn :solid?))
-
 (defn creature?
   [m id]
   (type= m id :creature))
-
-(def player? (attrfn :player?))
 
 (def players (flagfn :player?))
 
@@ -371,7 +370,3 @@
 (defmethod apply-command :cam-right
   [m _]
   (update m :cam shift (cam-shift m) 0))
-
-
-
-
