@@ -1,5 +1,5 @@
 (ns falx.gfx
-  (:import (com.badlogic.gdx.graphics.g2d TextureRegion SpriteBatch)
+  (:import (com.badlogic.gdx.graphics.g2d TextureRegion SpriteBatch BitmapFont)
            (com.badlogic.gdx.graphics GL20 OrthographicCamera)
            (com.badlogic.gdx Gdx)
            (com.badlogic.gdx.math Matrix4)))
@@ -50,3 +50,13 @@
           ^float y
           ^float w
           ^float h)))
+
+(defn draw-text!
+  "Draws the text string `text` at position `x`, `y`"
+  [^BitmapFont font text x y]
+  (.draw font *batch* text ^float x ^float y))
+
+(defn draw-as-text!
+  "Draws the object as text at position `x`, `y`"
+  [font o x y]
+  (draw-text! font (str o) x y))

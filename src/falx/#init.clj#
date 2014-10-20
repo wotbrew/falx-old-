@@ -1,5 +1,5 @@
 (ns falx.init
-  (:import (com.badlogic.gdx.graphics.g2d SpriteBatch BitmapFont))
+  (:import (com.badlogic.gdx.graphics.g2d SpriteBatch))
   (:require [falx.state :as state]
             [falx.io :as io]
             [falx.loop :as loop]
@@ -29,11 +29,6 @@
   (reset! state/sprites (io/edn "resources/tiles/sprites.edn"))
   nil)
 
-(defn font!
-  []
-  (println "Creating font")
-  (reset! state/font @(state/on-renderer (BitmapFont.))))
-
 (defn game!
   []
   (println "Creating game")
@@ -50,5 +45,4 @@
   (batch!)
   (cam!)
   (sprites!)
-  (font!)
   (game!))

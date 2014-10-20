@@ -370,3 +370,40 @@
 (defmethod apply-command :cam-right
   [m _]
   (update m :cam shift (cam-shift m) 0))
+
+;;screen
+
+(def default-screen [1024 768])
+
+(defn screen
+  "Return the screen width and height as a tuple."
+  [m]
+  (:screen m default-screen))
+
+(defn top-left
+  "Return the top-left screen co-ordinates"
+  [m]
+  (let [[w h] (screen m)]
+    (tuple (/ w -2) (/ h 2))))
+
+(defn mid-left
+  "Return the mid-left screen co-ordinates"
+  [m]
+  (let [[w h] (screen m)]
+    (tuple (/ w -2) 0)))
+
+(defn bottom-left
+  "Return the bottom-left screen co-ordinates"
+  [m]
+  (let [[w h] (screen m)]
+    (tuple (/ w -2) (/ h -2))))
+
+
+(comment
+  "top left"
+  (top-left {:screen [1024 768]})
+  (top-left nil)
+  "mid left"
+  (mid-left {:screen [1024 768]})
+  "bottom-left"
+  (bottom-left {:screen [1024 768]}))

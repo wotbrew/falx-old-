@@ -78,6 +78,8 @@
   (when-let [[file rect] (get @sprites sprite)]
     (get-region file rect)))
 
+(defonce font (atom nil))
+
 (defonce batch (atom nil))
 
 (defonce cam (atom nil))

@@ -33,8 +33,18 @@
   (render-layer! m (tuple wid :object))
   (render-layer! m (tuple wid :creature)))
 
+(defn debug!
+  [m]
+  (let [[x y] (top-left m)]
+    (draw-as-text! @state/font
+                   (select-keys m [:world-mouse
+                                   :screen-mouse
+                                   :fps])
+                   x y)))
+
 (defn render-screen!
-  [m])
+  [m]
+  (debug! m))
 
 (defn begin-cam!
   [cam game]

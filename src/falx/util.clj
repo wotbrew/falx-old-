@@ -111,3 +111,8 @@
   "Is point a (x, y) east of b (x2, y2)"
   [[x y] [x2 y2]]
   (neg? (- x x2)))
+
+(def map->size
+  "Take a map `m` that contains at least the keys, :width and :height. 
+  returns a tuple of the :width and :height."
+  (juxt :width :height))
