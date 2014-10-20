@@ -109,3 +109,21 @@
                                    :player? true})]
         (is (player? m id))
         (is (contains? (players m) id))))))
+
+(deftest test-screen-fns
+  (testing "Fns should be defaulted correctly"
+    (is (= (screen nil)
+           default-screen))
+    (is (= (top-left nil)
+           (top-left {:screen default-screen})))
+    (is (= (mid-left nil)
+           (mid-left {:screen default-screen})))
+    (is (= (bottom-left nil)
+           (bottom-left {:screen default-screen}))))
+  (testing "Screen fn's should give reasonable answers"
+    (is (= (top-left nil)
+           [-512 384]))
+    (is (= (mid-left {:screen [2048 1024]})
+           [-1024 0]))
+    (is (= (bottom-left {:screen [640 480]})
+           [-320 -240]))))
