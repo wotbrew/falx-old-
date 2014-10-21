@@ -407,3 +407,61 @@
   (mid-left {:screen [1024 768]})
   "bottom-left"
   (bottom-left {:screen [1024 768]}))
+
+;;ui
+
+(def default-cell-size
+  "The default size of a cell in the game, e.g [32,32]"
+  (tuple 32 32))
+
+(defn cell-size
+  "Return the cell size used by the game"
+  [m]
+  (:cell-size m default-cell-size))
+
+(defn mouse-cell
+  "Return the pt x,y in the world 
+  that the mouse is currently over."
+  [m]
+  (let [[x y] (:mouse-world m)
+        [w h] (cell-size m)]
+    (tuple (int (/ x w))
+           (int (/ (- y h) (- h))))))
+
+(defn ui-frame
+  "Perform a set of ui updates
+   that should be applied eagerly every frame"
+  [m]
+  (assoc m :mouse-cell (mouse-cell m)))
+
+;;debug
+
+(defn mouse-debug
+  "Return some debug information about the mouse position"
+  [m]
+  {:cell (mouse-cell m)
+   :world (:mouse-world m)
+   :screen (:mouse-screen m)})
+
+(defn general-debug
+  "Return some generic debug information"
+  [m]
+  (merge (select-keys (mouse-debug m) [:cell])
+         (select-keys m [:fps])))
+
+(defn debug
+  "Return the current debug information for the game"
+  [m]
+  (general-debug m))
+
+;; default setup
+
+(def default-key-bindings
+  "A default set of keybindings to commands that can be used for the game"
+  [[:pressed :w, :cam-up]
+   [:pressed :a, :cam-left]
+   [:pressed :d, :cam-right]
+   [:pressed :s, :cam-down]
+   [:pressed :lshift, :cam-fast]
+   [:hit :left, :select]])
+

@@ -37,9 +37,7 @@
   [m]
   (let [[x y] (top-left m)]
     (draw-as-text! @state/font
-                   (select-keys m [:world-mouse
-                                   :screen-mouse
-                                   :fps])
+                   (debug m)
                    x y)))
 
 (defn render-screen!

@@ -8,13 +8,6 @@
             [falx.core :refer :all]
             [falx.cam :as cam]))
 
-(def key-bindings
-  [[:pressed :w, :cam-up]
-   [:pressed :a, :cam-left]
-   [:pressed :d, :cam-right]
-   [:pressed :s, :cam-down]
-   [:pressed :lshift, :cam-fast]
-   [:hit :left, :select]])
 
 (defn grender
   []
@@ -24,14 +17,15 @@
           input (swap! state/input input/next-state next)
           mouse (:mouse-pos input)
           world-mouse (cam/unproject cam mouse)
-          commands (input/commands-hit input key-bindings)
+          commands (input/commands-hit input default-key-bindings)
           delta (.. Gdx/graphics (getDeltaTime))
           fps (.. Gdx/graphics (getFramesPerSecond))]
       (swap! state/game #(-> %
-                             (assoc :world-mouse world-mouse
-                                    :screen-mouse mouse
+                             (assoc :mouse-world world-mouse
+                                    :mouse-screen mouse
                                     :delta delta
                                     :fps fps)
+                             ui-frame
                              (apply-commands commands))))))
 
 (defn gresize
