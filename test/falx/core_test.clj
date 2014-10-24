@@ -127,3 +127,41 @@
            [-1024 0]))
     (is (= (bottom-left {:screen [640 480]})
            [-320 -240]))))
+
+(deftest test-selection
+  (let [game {}]
+    (testing "By default there should be no selected entites"
+      (is (empty? (selected game))))
+    (testing "Lets create a single entity"
+      (let [[game id] (create-pair game {:name "jim"})]
+        (testing "By default my entity should not be selected"
+          (is (not  (selected? game id)))
+          (is (empty? (selected game))))
+        (testing "If I select it it should be selected"
+          (let [game (select game id)]
+            (is (selected? game id))
+            (is (= #{id} (selected game)))
+            (testing "Lets make sure I can unselect"
+              (let [game (unselect game id)]
+                (is (not (selected? game id)))
+                (is (empty? (selected game)))))))
+        (testing "Best check that I can select more than one entity"
+          (let [[game id2] (create-pair game {:name "ethel"})
+                game (select game id)
+                game (select game id2)]
+            (is (= (hash-set id id2) (selected game)))
+            (is (selected? game id))
+            (is (selected? game id2))
+            (testing "Unselecting just the second id leaves the first selected"
+              (let [game (unselect game id2)]
+                (is (selected? game id))
+                (is (not (selected? game id2)))))
+            (testing "Unselecting all leaves me with no selected entities"
+              (let [game (unselect-all game)]
+                (is (empty? (selected game)))))
+            (testing "Selecting just entity 2 - the first entity is unselected"
+              (let [game (select-only game id2)]
+                (is (not (selected? game id)))
+                (is (selected? game id2))))))))))
+
+

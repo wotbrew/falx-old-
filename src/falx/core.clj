@@ -160,7 +160,7 @@
   [m att]
   (-> m :attr-ae (get att)))
 
-(def ave? #{:pos :world :layer :type :player?})
+(def ave? #{:pos :world :layer :type :player? :selected?})
 
 (def ae? #{:sprite :image})
 
@@ -253,7 +253,11 @@
     (-> (set-attr m id :id id)
         (set-attrs id attrs))))
 
-(defmulti create (fn [m attrs] (:type attrs)))
+(defmulti create
+  "Take a game and a map describing an entity. 
+   creates the entity, assigning it a new identity. 
+   dispatches on :type to set up a variety of default properties"
+  (fn [m attrs] (:type attrs)))
 
 (defmethod create :default
   [m attrs]
@@ -265,6 +269,8 @@
                :solid? true)))
 
 (defn create-pair
+  "Creates an entity via `create`. Returns a pair of the new game-state
+   and the identity assigned to the entity."
   [m attrs]
   [(create m attrs) (next-id m)])
 
@@ -314,6 +320,10 @@
 
 (defattr player? "Is the entity a player?")
 
+(def players
+  "Get the list of current players"
+  (flagfn :player?))
+
 (defn type=
   [m id type]
   (= type (attr m id :type)))
@@ -322,7 +332,33 @@
   [m id]
   (type= m id :creature))
 
-(def players (flagfn :player?))
+
+(defattr selected? "Is the entity selected?")
+
+(def selected
+  "Returns the list of currently selected entities"
+  (flagfn :selected?))
+
+(defn select
+  "Selects the given entity"
+  [m id]
+  (set-attr m id :selected? true))
+
+(defn unselect
+  "Unselects the given entity"
+  [m id]
+  (rem-attr m id :selected?))
+
+(defn unselect-all
+  "Unselects all entities that are currently selected"
+  [m]
+  (reduce unselect m (selected m)))
+
+(defn select-only
+  "Selects the given entity, and makes sure only that entity is selected"
+  [m id]
+  (-> (unselect-all m)
+      (select id)))
 
 ;;commands
 
