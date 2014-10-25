@@ -133,7 +133,8 @@
     (testing "By default there should be no selected entites"
       (is (empty? (selected game))))
     (testing "Lets create a single entity"
-      (let [[game id] (create-pair game {:name "jim"})]
+      (let [[game id] (create-pair game {:name "jim"
+                                         :player? true})]
         (testing "By default my entity should not be selected"
           (is (not  (selected? game id)))
           (is (empty? (selected game))))
@@ -146,7 +147,8 @@
                 (is (not (selected? game id)))
                 (is (empty? (selected game)))))))
         (testing "Best check that I can select more than one entity"
-          (let [[game id2] (create-pair game {:name "ethel"})
+          (let [[game id2] (create-pair game {:name "ethel"
+                                              :player? true})
                 game (select game id)
                 game (select game id2)]
             (is (= (hash-set id id2) (selected game)))

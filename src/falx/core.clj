@@ -316,6 +316,18 @@
 
 (defby-attr at "Get the set of entities at the position" :pos)
 
+(defn fat
+  "Find the first entity meeting some query predicate (fn of game, id) at `pos`"
+  [m pred pos]
+  (first (filter #(pred m %) (at m pos))))
+
+(defn fatfn
+  "Returns a function given the query predicated that will call `fat` on 
+   the world and position. See `fat`"
+  [pred]
+  (fn [m pos]
+    (fat m pred pos)))
+
 (defattr solid? "Is the entity solid?")
 
 (defattr player? "Is the entity a player?")
@@ -323,6 +335,15 @@
 (def players
   "Get the list of current players"
   (flagfn :player?))
+
+(def player-at
+  "Get the player at pos"
+  (fatfn player?))
+
+(defn player-at-mouse
+  "Get the player at the mouse position"
+  [m]
+  (player-at m (:mouse-pos m)))
 
 (defn type=
   [m id type]
@@ -332,17 +353,23 @@
   [m id]
   (type= m id :creature))
 
-
 (defattr selected? "Is the entity selected?")
 
 (def selected
   "Returns the list of currently selected entities"
   (flagfn :selected?))
 
-(defn select
-  "Selects the given entity"
+(defn selectable?
+  "Is the entity selectable."
   [m id]
-  (set-attr m id :selected? true))
+  (player? m id))
+
+(defn select
+  "Selects the given entity. If the entity is not selectable, nothing will happen."
+  [m id]
+  (if (selectable? m id)
+    (set-attr m id :selected? true)
+    m))
 
 (defn unselect
   "Unselects the given entity"
@@ -359,53 +386,6 @@
   [m id]
   (-> (unselect-all m)
       (select id)))
-
-;;commands
-
-(defmulti apply-command (fn [m command] command))
-
-(defmethod apply-command :default
-  [m _]
-  m)
-
-(defn apply-commands
-  [m commands]
-  (let [m (assoc m :commands (set commands))]
-    (reduce apply-command m commands)))
-
-
-(defn command-hit?
-  [m command]
-  (-> m :commands (get command)))
-
-(def cam-slow-speed 500)
-
-(def cam-fast-speed (* 2.5 cam-slow-speed))
-
-(defn cam-speed
-  [m]
-  (if (command-hit? m :cam-fast) cam-fast-speed
-                                 cam-slow-speed))
-
-(defn cam-shift
-  [m]
-  (* (:delta m 0) (cam-speed m)))
-
-(defmethod apply-command :cam-up
-  [m _]
-  (update m :cam shift 0 (cam-shift m)))
-
-(defmethod apply-command :cam-down
-  [m _]
-  (update m :cam shift 0 (- (cam-shift m))))
-
-(defmethod apply-command :cam-left
-  [m _]
-  (update m :cam shift (- (cam-shift m)) 0))
-
-(defmethod apply-command :cam-right
-  [m _]
-  (update m :cam shift (cam-shift m) 0))
 
 ;;screen
 
@@ -464,11 +444,81 @@
     (tuple (int (/ x w))
            (int (/ (- y h) (- h))))))
 
+(defn mouse-pos
+  "Return the pos triple world,x,y that the mouse is currently over"
+  [m]
+  (let [world (:current-world m)
+        [x y] (:mouse-cell m)]
+    (tuple world x y)))
+
+(defn mderive
+  "Take a map a key and a fn. Apply the fn to the map and assoc the result with the key into the map"
+  [m key f]
+  (assoc m key (f m)))
+
 (defn ui-frame
   "Perform a set of ui updates
-   that should be applied eagerly every frame"
+  that should be applied eagerly every frame"
   [m]
-  (assoc m :mouse-cell (mouse-cell m)))
+  (-> (mderive m :mouse-cell mouse-cell)
+      (mderive :mouse-pos mouse-pos)))
+
+;;commands
+
+(defmulti apply-command (fn [m command] command))
+
+(defmethod apply-command :default
+  [m _]
+  m)
+
+(defn apply-commands
+  [m commands]
+  (let [m (assoc m :commands (set commands))]
+    (reduce apply-command m commands)))
+
+(defn command-hit?
+  [m command]
+  (-> m :commands (get command)))
+
+(def cam-slow-speed 500)
+
+(def cam-fast-speed (* 2.5 cam-slow-speed))
+
+(defn cam-speed
+  [m]
+  (if (command-hit? m :cam-fast) cam-fast-speed
+                                 cam-slow-speed))
+
+(defn cam-shift
+  [m]
+  (* (:delta m 0) (cam-speed m)))
+
+(defmethod apply-command :cam-up
+  [m _]
+  (update m :cam shift 0 (cam-shift m)))
+
+(defmethod apply-command :cam-down
+  [m _]
+  (update m :cam shift 0 (- (cam-shift m))))
+
+(defmethod apply-command :cam-left
+  [m _]
+  (update m :cam shift (- (cam-shift m)) 0))
+
+(defmethod apply-command :cam-right
+  [m _]
+  (update m :cam shift (cam-shift m) 0))
+
+
+
+(defmethod apply-command :select
+  [m _]
+  (cond
+   (player-at-mouse m) (if (command-hit? m :select-many)
+                         (select m (player-at-mouse m))
+                         (select-only m (player-at-mouse m)))
+   
+   :else m))
 
 ;;debug
 
@@ -499,5 +549,6 @@
    [:pressed :d, :cam-right]
    [:pressed :s, :cam-down]
    [:pressed :lshift, :cam-fast]
-   [:hit :left, :select]])
+   [:hit :left, :select]
+   [:pressed :lshift, :select-many]])
 
