@@ -166,4 +166,22 @@
                 (is (not (selected? game id)))
                 (is (selected? game id2))))))))))
 
-
+(deftest test-primary-command-selection
+  "I'll put a single entity in the world at 3, 4"
+  (let [[game id] (create-pair nil {:name "fred", :pos [:world 3 4]})]
+    (testing "Double check nothing is selected"
+      (is (empty? (selected game))))
+    (testing "Ok, lets first check that if the mouse is on a different cell - nothing is selected"
+      (let [game (-> (assoc game :mouse-pos [:world 0 0])
+                     (apply-command :primary))]
+        (is (empty? (selected game)))))
+    (testing "Lets put the mouse on the right cell"
+      (let [game (-> (assoc game :mouse-pos [:world 3 4])
+                     (apply-command :primary))]
+        (testing "The entity is no a player, so shouldn't be selected"
+          (is (empty? (selected game))))
+        (testing "If I make the entity a player, it should be selected"
+          (let [game (-> (set-attr game id :player? true)
+                         (apply-command :primary))]
+            (is (selected? game id))
+            (is (= #{id} (selected game)))))))))

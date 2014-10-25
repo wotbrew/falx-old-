@@ -486,8 +486,9 @@
 
 (defn cam-speed
   [m]
-  (if (command-hit? m :cam-fast) cam-fast-speed
-                                 cam-slow-speed))
+  (if (command-hit? m :mod)
+    cam-fast-speed
+    cam-slow-speed))
 
 (defn cam-shift
   [m]
@@ -509,12 +510,10 @@
   [m _]
   (update m :cam shift (cam-shift m) 0))
 
-
-
-(defmethod apply-command :select
+(defmethod apply-command :primary
   [m _]
   (cond
-   (player-at-mouse m) (if (command-hit? m :select-many)
+   (player-at-mouse m) (if (command-hit? m :mod)
                          (select m (player-at-mouse m))
                          (select-only m (player-at-mouse m)))
    
@@ -548,7 +547,6 @@
    [:pressed :a, :cam-left]
    [:pressed :d, :cam-right]
    [:pressed :s, :cam-down]
-   [:pressed :lshift, :cam-fast]
-   [:hit :left, :select]
-   [:pressed :lshift, :select-many]])
+   [:pressed :lshift :mod]
+   [:hit :left, :primary]])
 
