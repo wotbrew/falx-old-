@@ -1,7 +1,12 @@
 (ns falx.util
   "Contains utility functions useful in any context"
-  (:require [clj-tuple :refer [tuple]])
+  (:require [clj-tuple :refer [tuple]]
+            [clojure.string :as str])
   (:import (clojure.lang MapEntry)))
+
+(defn unlines
+  [coll]
+  (str/join "\n" coll))
 
 (defn update
   "Like update-in but applies a fn at location given by key."

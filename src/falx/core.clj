@@ -276,9 +276,9 @@
 
 
 (defn create-world
+  "Create a world from a tiled map object"
   [m tiled-map]
-  (let [id (next-id m)
-        m (create m (select-keys tiled-map [:name :size]))
+  (let [[m id] (create-pair m (select-keys tiled-map [:name :size]))
         objs (map-stream tiled-map)
         objs (for [o objs]
                (-> (assoc-in o [:pos 0] id)
@@ -336,8 +336,13 @@
   "Get the list of current players"
   (flagfn :player?))
 
+(defn nth-player
+  "Return the nth player or nil"
+  [m n]
+  (nth (seq (players m)) n nil))
+
 (def player-at
-  "Get the player at pos"
+  "Get the player at pos or nil"
   (fatfn player?))
 
 (defn player-at-mouse
@@ -352,6 +357,10 @@
 (defn creature?
   [m id]
   (type= m id :creature))
+
+(def creature-at
+  "Get the creature at a pos or nil"
+  (fatfn creature?))
 
 (defattr selected? "Is the entity selected?")
 
@@ -386,6 +395,13 @@
   [m id]
   (-> (unselect-all m)
       (select id)))
+
+(defn select-or-unselect
+  "Selects the entity, if the entity is already selected - unselects."
+  [m id]
+  (if (selected? m id)
+    (unselect m id)
+    (select m id)))
 
 ;;screen
 
@@ -435,11 +451,14 @@
   [m]
   (:cell-size m default-cell-size))
 
+(def default-mouse-cell
+  (tuple 0 0))
+
 (defn mouse-cell
   "Return the pt x,y in the world 
   that the mouse is currently over."
   [m]
-  (let [[x y] (:mouse-world m)
+  (let [[x y] (:mouse-world m default-mouse-cell)
         [w h] (cell-size m)]
     (tuple (int (/ x w))
            (int (/ (- y h) (- h))))))
@@ -510,14 +529,22 @@
   [m _]
   (update m :cam shift (cam-shift m) 0))
 
+(defn select-mod
+  [m id]
+  (if (command-hit? m :mod)
+    (select-or-unselect m id)
+    (select-only m id)))
+
 (defmethod apply-command :primary
   [m _]
   (cond
-   (player-at-mouse m) (if (command-hit? m :mod)
-                         (select m (player-at-mouse m))
-                         (select-only m (player-at-mouse m)))
-   
+   (player-at-mouse m) (select-mod m (player-at-mouse m))
    :else m))
+
+(dotimes [x 6]
+  (defmethod apply-command (keyword (str "select-" (inc x)))
+    [m _]
+    (select-mod m (nth-player m x))))
 
 ;;debug
 
@@ -526,13 +553,20 @@
   [m]
   {:cell (mouse-cell m)
    :world (:mouse-world m)
-   :screen (:mouse-screen m)})
+   :screen (:mouse-screen m)
+   :pos (:mouse-pos m)})
+
+(defn entity-debug
+  [m]
+  {:at (at m (:mouse-pos m))
+   :cr (creature-at m (:mouse-pos m))})
 
 (defn general-debug
   "Return some generic debug information"
   [m]
-  (merge (select-keys (mouse-debug m) [:cell])
-         (select-keys m [:fps])))
+  (unlines [(mouse-debug m)
+            (entity-debug m)
+            (select-keys m [:fps :current-world :commands])]))
 
 (defn debug
   "Return the current debug information for the game"
@@ -547,6 +581,12 @@
    [:pressed :a, :cam-left]
    [:pressed :d, :cam-right]
    [:pressed :s, :cam-down]
-   [:pressed :lshift :mod]
-   [:hit :left, :primary]])
+   [:pressed :lshift, :mod]
+   [:hit :left, :primary]
+   [:hit :f1, :select-1]
+   [:hit :f2, :select-2]
+   [:hit :f3, :select-3]
+   [:hit :f4, :select-4]
+   [:hit :f5, :select-5]
+   [:hit :f6, :select-6]])
 

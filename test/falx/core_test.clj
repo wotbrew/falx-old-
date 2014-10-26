@@ -184,4 +184,24 @@
           (let [game (-> (set-attr game id :player? true)
                          (apply-command :primary))]
             (is (selected? game id))
-            (is (= #{id} (selected game)))))))))
+            (is (= #{id} (selected game)))
+            (testing "Best check using the mod key"
+              (let [[game id2] (create-pair game {:name "ethel"
+                                                  :player? true
+                                                  :pos [:world 4 4]})]
+                (testing "If I select with mod down I should have selected both entites"
+                  (let [game (-> (assoc game :mouse-pos [:world 4 4])
+                                 (assoc :commands #{:mod})
+                                 (apply-command :primary))]
+                    (is (= #{id id2} (selected game)))
+                    (testing "If I reselect an entity with mod-down it should be unselected"
+                      (let [game (-> game
+                                     (apply-command :primary))]
+                        (is (= #{id} (selected game)))))
+                    (testing "I could reselect using a key"
+                      (let [game
+                            (-> (unselect-all game)
+                                (apply-command :select-1)
+                                (apply-command :select-2))]
+                        (is (= #{id id2} (selected game)))))))))))))))
+
