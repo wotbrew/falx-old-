@@ -5,7 +5,7 @@
   (:require [falx.render :as render]
             [falx.state :as state]
             [falx.input :as input]
-            [falx.core :refer :all]
+            [falx.game :as game]
             [falx.cam :as cam]))
 
 
@@ -17,7 +17,7 @@
           input (swap! state/input input/next-state next)
           mouse (:mouse-pos input)
           world-mouse (cam/unproject cam mouse)
-          commands (input/commands-hit input default-key-bindings)
+          commands (input/commands-hit input game/default-key-bindings)
           delta (.. Gdx/graphics (getDeltaTime))
           fps (.. Gdx/graphics (getFramesPerSecond))]
       (swap! state/game #(-> %
@@ -25,8 +25,8 @@
                                     :mouse-screen mouse
                                     :delta delta
                                     :fps fps)
-                             ui-frame
-                             (apply-commands commands))))))
+                             game/ui-frame
+                             (game/apply-commands commands))))))
 
 (defn gresize
   [x y])

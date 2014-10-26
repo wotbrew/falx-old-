@@ -13,6 +13,7 @@
             :profiles {:dev {:dependencies   [[org.clojure/tools.trace "0.7.8"]]
                              :resource-paths ["test-resources"]}}
             :dependencies [[org.clojure/clojure "1.7.0-alpha1"]
+                           [org.clojure/test.check "0.5.9"]
                            [com.stuartsierra/component "0.2.1"]
                            [cheshire "5.3.1"]
                            [clj-tiny-grid "0.1.0-SNAPSHOT"]

@@ -1,25 +1,27 @@
 (ns falx.render
   (:import (com.badlogic.gdx.graphics OrthographicCamera))
-  (:require [falx.core :refer :all]
-            [falx.util :refer :all]
+  (:require [falx.util :refer :all]
             [falx.gfx :refer :all]
+            [falx.db :as db]
             [falx.state :as state]
             [falx.cam :as cam]
+            [falx.game :as game]
             [clj-tuple :refer [tuple]]))
 
 (defmulti render-layer! (fn [m [wid slice]] slice))
 
 (defn find-region
   [m e]
-  (or (attr m e :image)
-      (attr m e :sprite)))
+  (or (db/attr m e :image)
+      (db/attr m e :sprite)))
 
 (defmethod render-layer! :default
   [m [wid slice :as layer]]
-  (doseq [e (by-attr m :layer layer)
-          :let [[x y] (pt m e)
+  (doseq [e (db/by-val m :layer layer)
+          :let [[_ x y] (db/attr m e :pos)
                 region (find-region m e)]
           :when (and x y region)]
+    
     (draw-region! region
                   (int (* x 32))
                   (int (* y -32))
@@ -35,9 +37,9 @@
 
 (defn debug!
   [m]
-  (let [[x y] (top-left m)]
+  (let [[x y] (game/top-left m)]
     (draw-as-text! @state/font
-                   (debug m)
+                   (game/debug m)
                    x y)))
 
 (defn render-screen!
@@ -59,7 +61,7 @@
     (clear!)
     (with-batch! batch
       (let [game @state/game
-            wid (:world game 0)]
+            wid (:current-world game 0M)]
         (when-let [cam @state/cam]
           (begin-cam! cam game)
           (render-world! game wid)

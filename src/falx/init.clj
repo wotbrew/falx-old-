@@ -4,7 +4,9 @@
             [falx.io :as io]
             [falx.loop :as loop]
             [falx.cam :as cam]
-            [falx.core :refer :all]))
+            [falx.tiled :as tiled]
+            [falx.db :as db]
+            [falx.game :as game]))
 
 (defn atlas!
   []
@@ -33,14 +35,18 @@
   (println "Creating font")
   (reset! state/font @(state/on-renderer (BitmapFont.))))
 
+(def default-game
+  {:falx.db/ae? #{:sprite :image}
+   :falx.db/ave? #{:player? :selected? :world :pos :layer :type}})
+
 (defn game!
   []
   (println "Creating game")
-  (let [tmap (load-map "test-resources/test-map.json")
-        game (-> (create-world nil tmap)
-                 (assoc :current-world 0)
-                 (update-attrs :image state/image->region)
-                 (update-attrs :sprite state/sprite->region))]
+  (let [tmap (tiled/load-map "test-resources/test-map.json")
+        game (-> (tiled/create-world default-game tmap)
+                 (assoc :current-world 0M)
+                 (db/update-with-attr :image state/image->region)
+                 (db/update-with-attr :sprite state/sprite->region))]
     (reset! state/game game)
     nil))
 
