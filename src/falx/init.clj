@@ -6,7 +6,6 @@
             [falx.cam :as cam]
             [falx.core :refer :all]))
 
-
 (defn atlas!
   []
   (println "Creating atlas")
@@ -39,6 +38,7 @@
   (println "Creating game")
   (let [tmap (load-map "test-resources/test-map.json")
         game (-> (create-world nil tmap)
+                 (assoc :current-world 0)
                  (update-attrs :image state/image->region)
                  (update-attrs :sprite state/sprite->region))]
     (reset! state/game game)
