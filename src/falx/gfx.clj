@@ -54,7 +54,7 @@
 (defn draw-text!
   "Draws the text string `text` at position `x`, `y`"
   [^BitmapFont font text x y]
-  (.draw font *batch* text ^float x ^float y))
+  (.drawMultiLine font *batch* text ^float x ^float y))
 
 (defn draw-as-text!
   "Draws the object as text at position `x`, `y`"
