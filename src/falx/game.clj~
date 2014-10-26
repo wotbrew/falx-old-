@@ -1,3 +1,0 @@
-(ns falx.game
-  (:require [falx.db :as db]))
-
