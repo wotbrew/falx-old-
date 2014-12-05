@@ -113,3 +113,17 @@
                   :hit (hit key))]
       command)))
 
+(def default-key-bindings
+  "A default set of keybindings to commands that can be used for the game"
+  [[:pressed :w, :cam-up]
+   [:pressed :a, :cam-left]
+   [:pressed :d, :cam-right]
+   [:pressed :s, :cam-down]
+   [:pressed :lshift, :mod]
+   [:hit :left, :primary]
+   [:hit :f1, :select-1]
+   [:hit :f2, :select-2]
+   [:hit :f3, :select-3]
+   [:hit :f4, :select-4]
+   [:hit :f5, :select-5]
+   [:hit :f6, :select-6]])
