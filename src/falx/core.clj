@@ -6,13 +6,17 @@
             [gdx-2d.cam :as cam]
             [gdx-2d.color :as color]
             [silc.core :refer :all]
+            [clj-tiny-astar.path :refer [a*]]
+            [clojure.tools.logging :refer [info debug error]]
             [clojure.core.memoize :as mem]
+            [clojure.core.async :refer [<! >! chan go go-loop timeout] :as async]
             [clojure.string :as str]
             [clojure.set :as set]
             [cheshire.core :as json]
             [clj-tuple :refer [tuple]]
             [falx
-             [state :refer :all]
+             [base :refer :all]
+             [state :refer :all :as state]
              [input :as input]
              [point :as pt]]))
 
@@ -35,18 +39,16 @@
   [m pred]
   (into {} (filter (comp pred first) m)))
 
+(defn ffilter
+  [pred coll]
+  (first (filter pred coll)))
+
 (defn idiv
   "Like `/` but coerces its result to an int"
   [a b]
   (int (/ a b)))
 
-(defn selected?
-  [game e]
-  (boolean (att game e :selected?)))
 
-(defn entities-at-mouse
-  [game]
-  (with-many game {:map (:map game) :pos (:mouse-cell game)}))
 
 (defmulti apply-command (fn [m command] command))
 
@@ -54,22 +56,206 @@
   [m _]
   m)
 
+(defn command-hit?
+  [m command]
+  (-> m :commands (get command)))
+
+(defn mod?
+  [m]
+  (command-hit? m :mod))
+
 (defn apply-commands
   [m commands]
   (let [m (assoc m :commands (set commands))]
     (reduce apply-command m commands)))
 
-(defn command-hit?
-  [m command]
-  (-> m :commands (get command)))
+(defn mouse
+  "Returns the current mouse position in terms of world cells."
+  [game]
+  (:mouse-cell game pt/id))
 
-(def cam-slow-speed 500)
+(defn pos
+  "Returns the position of the entity"
+  [m e]
+  (att m e :pos))
 
-(def cam-fast-speed (* 2.5 cam-slow-speed))
+(defn at
+  "Find the entities at the given point (and map)"
+  ([game pt]
+   (at game (:map game) pt))
+  ([game map pt]
+   (with-many game {:map map :pos pt})))
+
+(defn at-mouse
+  "Find the entities at the mouse position"
+  [game]
+  (at game (mouse game)))
+
+(defn at-fn
+  "Returns a function that when passed a game
+   and pt will return the entities at
+   the point that meet the predicate"
+  [pred]
+  (fn [game pt]
+    (filter #(pred game %) (at game pt))))
+
+(defn at-mouse-fn
+  "Returns a function that when passed a game
+   will return the entities at the mouse
+   that meet the predicate"
+  [pred]
+  (fn [game]
+    (filter #(pred game %) (at-mouse game))))
+
+(defn att-fn
+  "Returns a function that when passed a game
+   and entity will return the att `k`."
+  [k]
+  (fn [game e] (att game e k)))
+
+(defn type-is-fn
+  [type]
+  (fn [game e] (= type (att game e :type))))
+
+(def creature?
+  "Is the entity a creature?"
+  (type-is-fn :creature))
+
+(defn creatures
+  "Returns all the creatures"
+  [game]
+  (with game :type :creature))
+
+(def creature-at-mouse
+  "Return the entities at the mouse position"
+  (comp first (at-mouse-fn creature?)))
+
+(def selected?
+  "Is the entity selected?"
+  (att-fn :selected?))
+
+(defn selected
+  "Returns all the selected entities"
+  [m]
+  (all m :selected?))
+
+(defn unselect
+  "Unselects the entity"
+  [m e]
+  (delete-att m e :selected?))
+
+(defn unselect-all
+  "Unselects any entity which is selected"
+  [m]
+  (reduce unselect m (selected m)))
+
+(defn selectable?
+  "Is the given entity selectable"
+  [m e]
+  (and (creature? m e)))
+
+(def selectable-at (at-fn selectable?))
+(def selectable-at? (comp boolean first selectable-at))
+(def selectable-at-mouse  (comp first (at-mouse-fn selectable?)))
+
+(defn select
+  "Selects the entity"
+  [m e]
+  (if (selectable? m e)
+    (set-att m e :selected? true)
+    m))
+
+(defn select-only
+  "Selects only the entity supplied, unselecting all other entities"
+  [m e]
+  (-> (unselect-all m)
+      (select e)))
+
+(defn perform-select
+  "Selects the entity
+   - if the modifier key is down it is added to the selection
+   - otherwise only the given selection is made"
+  [m e]
+  (if (mod? m)
+    (select m e)
+    (select-only m e)))
+
+(defn select-at-mouse
+  "Selects the entity at the mouse"
+  [m]
+  (if-let [e (creature-at-mouse m)]
+    (perform-select m e)
+    m))
+
+(defn solid?
+  "Is the entity solid?"
+  [m e]
+  (or (att m e :solid?)
+      (= :wall (att m e :terrain))
+      (creature? m e)))
+
+(def solid-at (at-fn solid?))
+(def solid-at? (comp boolean first solid-at))
+
+(defn goto
+  "LOL - doesn't perform a goto.
+   Rather adds the intention to goto the given point."
+  [m e pt]
+  (set-att m e :goto pt))
+
+(defn forget-goto
+  "Clears the goto intention from the entity"
+  [m e]
+  (delete-att m e :goto))
+
+(defn selected-goto
+  "Instructs the selected entities to goto the given pt"
+  [m pt]
+  (reduce #(goto %1 %2 pt) m (selected m)))
+
+(defn selected-goto-mouse
+  "Instructs the selected entities to goto the mouse position"
+  [m]
+  (selected-goto m (mouse m)))
+
+(defn dead?
+  "Is the entity dead?"
+  [m e]
+  (att m e :dead?))
+
+(defn map-size
+  "Returns the size of the given map as a tuple"
+  [m map]
+  [(att m map :width) (att m map :height)])
+
+(defn can-move?
+  "Can the entity move to the point
+   - is it possible?"
+  [m e pt]
+  (and
+    (not (solid-at? m pt))
+    (when-let [pos (pos m e)]
+      (pt/adj? pos pt))))
+
+(defn move
+  "Attempt to move the entity from its current position
+   to the one specified"
+  [m e pt]
+  (if (can-move? m e pt)
+    (set-att m e :pos pt)
+    m))
+
+;;commands
+
+(def cam-slow-speed
+  500)
+
+(def cam-fast-speed
+  (* 2.5 cam-slow-speed))
 
 (defn cam-speed
   [m]
-  (if (command-hit? m :mod)
+  (if (mod? m)
     cam-fast-speed
     cam-slow-speed))
 
@@ -93,9 +279,155 @@
   [m _]
   (update m :cam (fnil pt/+ [0 0]) [(cam-shift m) 0]))
 
+(defmethod apply-command :primary
+  [m _]
+  (cond
+    (creature-at-mouse m) (select-at-mouse m)
+    :else (selected-goto-mouse m)))
+
+;;brain
+(def brain-tick 20)
+(def brain-spawner-tick 500)
+(def walk-tick 125)
+
+(defn path
+  [game e to]
+  (go
+    (let [pos (pos game e)
+          map (att game e :map)
+          bounds (map-size game map)
+          pred #(or (= pos %) (not (solid-at? game %)))]
+      (when (and pos map bounds)
+        (a* bounds pred pos to)))))
+
+(declare bwalk!)
+
+(defn forget-goto!
+  [e]
+  (send state/game forget-goto e))
+
+(defn attempt-move!
+  [e next]
+  (go (let [game @game
+            dead? (dead? game e)]
+        (if dead?
+          (do (debug e "is dead - cancelling move")
+              (forget-goto! e))
+          (do (send state/game move e next)
+              (await state/game)
+              (<! (timeout walk-tick)))))))
+
+(defn attempt-walk!
+  [e path]
+  (let [target (last path)]
+    (go-loop
+      [[p & rest] path]
+      (cond
+        (not p) (debug e "is done walking")
+        (not= target (att @game e :goto)) (do
+                                            (debug e "goto target changed - repathing")
+                                            (<! (bwalk! e)))
+        :else (do
+                (debug e "moving to" p)
+                (<! (attempt-move! e p))
+                (if (not= (pos @game e) p)
+                  (do
+                    (debug e "could not move due to unforseen obstacle - repathing")
+                    (<! (bwalk! e)))
+                  (recur rest)))))))
+
+(defn bwalk-at-goal!
+  [e]
+  (debug e "is at its goal")
+  (send state/game forget-goto e)
+  (await state/game))
+
+(defn bwalk-goto-now-solid!
+  [goto e]
+  (debug e "can no longer move to" goto "- it is solid")
+  (forget-goto! e))
+
+(defn bwalk!
+  [e]
+  (go
+    (let [game @game
+          goto (att game e :goto)]
+      (cond
+        (not goto) true
+        (= goto (pos game e)) (bwalk-at-goal! e)
+        (solid-at? game goto) (bwalk-goto-now-solid! goto e)
+        :else (if-let [pa (<! (path game e goto))]
+                (do
+                  (debug e "path to" goto "is" pa)
+                  (<! (attempt-walk! e pa)))
+                (forget-goto! e))))))
+
+
+(defn do-brain!
+  "Performed on each brain tick"
+  [e]
+  (go
+    (<! (bwalk! e))))
+
+(defn do-brain-spawning!
+  []
+  (let [creatures (creatures @game)
+        new
+        (dosync
+          (let [new (set/difference creatures @conscious)]
+            (commute conscious into new)
+            new))]
+    (doseq [e new]
+      (debug e "now has a brain")
+      (go-loop
+        []
+        (let [game @game
+              dead? (or (dead? game e) (not (creature? game e)))]
+          (when dead?
+            (debug e "is dead - removing brain")
+            (dosync (commute conscious disj e)))
+          (when-not dead?
+            (try
+              (<! (do-brain! e))
+              (catch Throwable e
+                (.printStackTrace e)
+                (<! (timeout 1000))))
+            (<! (timeout brain-tick))
+            (recur)))))))
+
+(defrecord BrainSpawner
+  [kill]
+  ILifecycle
+  (start [this]
+    (info "Starting brain spawner")
+    (reset! kill false)
+    (go-loop []
+      (if-not @kill
+        (do
+          (do-brain-spawning!)
+          (<! (timeout brain-spawner-tick))
+          (recur))
+        (info "Stopped brain spawner")))
+    this)
+  (stop [this]
+    (info "Stopping brain spawner")
+    (reset! kill true)
+    this))
+
+(defn brain-spawner
+  "A brain spawner is a ILifecycle component
+   that will when started periodically start ai brains
+   for entities where appropriate."
+  []
+  (->BrainSpawner (atom false)))
+
+
+;;tiles
+
 (defn load-tiled-map
   "Load a tiled map from a file and return its contents as a map"
   [file]
+  (info "Loading tiled map" file)
   (-> (json/parse-string (slurp file) true)
       (assoc :name (keyword (str/replace file #"(.+/)|(\.(.+))" "")))
       (assoc-with :size (juxt :width :height))))
@@ -223,6 +555,8 @@
                     (assoc-with :mouse-cell mouse-cell)
                     (apply-commands commands)))))
 
+;;debug
+
 (def pprint-str #(with-out-str (clojure.pprint/pprint %)))
 
 (def mem-pprint-str
@@ -241,7 +575,7 @@
     "\n"
     (mem-pprint-str (mem-filter-keys (atts game e) keyword?))))
 
-(defn debug
+(defn debug-str
   "Returns a debug string for the given game state"
   [game]
   (str/join
@@ -250,7 +584,9 @@
              (select-keys game [:mouse-screen :mouse-world :mouse-cell])
              (str "commands: " (:commands game))
              ""]
-            (map #(debug-entity-attributes game %) (entities-at-mouse game)))))
+            (map #(debug-entity-attributes game %) (at-mouse game)))))
+
+;;screen
 
 (defn screen
   [m]
@@ -295,6 +631,8 @@
   [m]
   [(width m) (height m)])
 
+;;rendering
+
 (defn draw-screen-positions!
   "Draws some markers to help position ui components"
   [game]
@@ -321,7 +659,7 @@
   "Draws some useful debug information to the screen"
   [game]
   (let [[x y] (top-left game)]
-    (g/draw-text! (debug game) x y)))
+    (g/draw-text! (debug-str game) x y)))
 
 (defn entities-in-layer
   "Return the set of entities in the map and layer"
@@ -331,12 +669,12 @@
 (defn draw-basic-layer!
   "Draw a basic set of entities for the given map and layer
    this simply renders entities with a :sprite and :pos value"
-  [game map* layer]
+  [game map* layer cw ch]
   (doseq [e (entities-in-layer game map* layer)
           :let [e (atts game e)]]
     (when-let [sprite (:sprite e)]
       (when-let [[x y] (:pos e)]
-        (g/draw-point! sprite (* x 32) (* y -32))))))
+        (g/draw-point! sprite (* x cw) (* y (- ch)))))))
 
 (defn sync-camera!
   [game]
@@ -358,18 +696,34 @@
     (g/draw-point! sprite x y)))
 
 (defn draw-creature-layer!
-  [game map*]
+  [game map* cw ch]
   (doseq [e (entities-in-layer game map* :creature)]
     (when-let [[x y] (att game e :pos)]
-      (draw-creature! game e (* x 32) (* y -32)))))
+      (draw-creature! game e (* x cw) (* y (- ch))))))
 
 (defn draw-map!
   [game]
   (when (:map game)
-    (draw-basic-layer! game (:map game) :base)
-    (draw-basic-layer! game (:map game) :decor)
-    (draw-basic-layer! game (:map game) :object)
-    (draw-creature-layer! game (:map game))))
+    (let [[cw ch] (cell-size game)]
+      (draw-basic-layer! game (:map game) :base cw ch)
+      (draw-basic-layer! game (:map game) :decor cw ch)
+      (draw-basic-layer! game (:map game) :object cw ch)
+      (draw-creature-layer! game (:map game) cw ch))))
+
+(defn mouse-sprite
+  [game]
+  (cond
+    (selectable-at-mouse game) :mouse-select
+    :else :mouse))
+
+(defn draw-mouse!
+  [game]
+  (let [[x y] (:mouse-screen game)
+        [_ h] (screen game)
+        [_ cs] (cell-size game)]
+    (when (and x y)
+      (let [sprite (or (mouse-sprite game) :mouse)]
+        (g/draw-point! sprite x (- h y cs))))))
 
 (defn render!
   []
@@ -386,15 +740,21 @@
               (catch Throwable e
                 (.printStackTrace e))))
           (draw-screen-positions! game)
-          (draw-debug! game))))))
+          (draw-debug! game)
+          (draw-mouse! game))))))
+
+;;examples
 
 (comment
   "begin ze game"
   (loop! #'render!
          (assoc settings
-                :max-fps 0))
+                :max-fps 60))
   "Init ze game"
   (init!)
+  (def bs (brain-spawner))
+  (start bs)
+  (stop bs)
   "load a map"
   (def example-map (load-tiled-map "test-resources/test-map.json"))
   "tiles from tile layers"
@@ -423,8 +783,9 @@
   (do (swap! game assoc :cam [0 0]) nil)
 
   "reset the game to its default"
-  (do (send game (constantly default-game))
+  (do (restart-agent game default-game)
       nil)
+  (send game (constantly default-game))
   "await the game"
   (await-for 1000 game))
 

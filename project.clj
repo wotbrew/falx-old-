@@ -3,13 +3,18 @@
             :url "http://github.com/danstone/falx"
             :license {:name "Eclipse Public License"
                       :url "http://www.eclipse.org/legal/epl-v10.html"}
-            :dependencies [[org.clojure/clojure "1.7.0-alpha1"]
+            :dependencies [[org.clojure/clojure "1.6.0"]
+                           [org.clojure/core.async "0.1.346.0-17112a-alpha"]
+                           [org.clojure/core.memoize "0.5.6"]
+                           [org.clojure/core.logic "0.8.8"]
+                           [org.clojure/tools.logging "0.3.1"]
+                           [log4j "1.2.16"]
                            [gdx-loopy "0.1.0-SNAPSHOT"]
                            [gdx-2d "0.1.0-SNAPSHOT"]
+                           [clj-tiny-astar "0.1.1-SNAPSHOT"]
                            [silc "0.1.3"]
                            [cheshire "5.3.1"]
-                           [clj-tuple "0.1.7"]
-                           [org.clojure/core.memoize "0.5.6"]]
+                           [clj-tuple "0.1.7"]]
             :global-vars {*warn-on-reflection* true}
             :java-source-paths ["src-java"]
             :repositories [["sonatype"

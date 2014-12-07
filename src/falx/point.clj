@@ -52,3 +52,27 @@
   [a b]
   (and (south? a b) (east? a b)))
 
+(defn manhattan-dist
+  ([[x0 y0] [x1 y1]]
+   (manhattan-dist x0 y0 x1 y1))
+  ([x0 y0 x1 y1]
+   (c+ (Math/abs ^int (c- x1 x0)) (Math/abs ^int (c- y1 y0)))))
+
+(defn precise-dist
+  [^double x0 ^double y0 ^double x1 ^double y1]
+  (let [dx (c- x1 x0)
+        dy (c- y1 y0)
+        dx (c* dx dx)
+        dy (c* dy dy)]
+    (Math/sqrt (c+ dx dy))))
+
+
+(defn adj?
+  ([[x y] [x2 y2]]
+   (adj? x y x2 y2))
+  ([x1 y1 x2 y2]
+   (and (<= (Math/abs ^int (c- x1 x2)) 1)
+        (<= (Math/abs ^int (c- y1 y2)) 1))))
+
+
+

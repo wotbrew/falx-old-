@@ -4,7 +4,8 @@
            (com.badlogic.gdx.graphics OrthographicCamera))
   (:require [gdx-2d.core :as g]
             [gdx-loopy.core :refer [on-render-thread]]
-            [silc.core :refer :all]))
+            [silc.core :refer :all]
+            [clojure.tools.logging :refer [info debug error]]))
 
 (def default-game
   "The initial value of the game"
@@ -15,6 +16,7 @@
                             #{:map :pos})))
 
 (defonce ^{:doc "The current game"} game (agent default-game))
+(defonce ^{:doc "The set of all concious entities"} conscious (ref #{}))
 (defonce ^{:doc "The last input state"} input (atom nil))
 (defonce ^{:doc "The default font"} font (atom nil))
 (defonce ^{:doc "The global sprite batch"} batch (atom nil))
@@ -22,10 +24,8 @@
 (defonce ^{:doc "A cache of regions against files and subregions against keys of the form [\"file\" x y w h]"}
          region-cache
   (atom nil))
-
 (defonce ^{:doc "A global 'pixel' texture for drawing solid color"}
          pixel (atom nil))
-
 
 (def settings
   "A map of default settings read in from resources/settings.edn"
@@ -47,7 +47,7 @@
 (defn cache-region!
   "Cache a given region at the given key"
   [key region]
-  (println "Caching region" key)
+  (info "Caching region" key)
   (swap! region-cache assoc key region)
   region)
 
@@ -96,6 +96,7 @@
   (draw-point! [this x y]
     (when-let [spr (find-sprite this)]
       (g/draw-point! spr x y))))
+
 
 (defn init!
   "Initialises the game"

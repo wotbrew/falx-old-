@@ -205,6 +205,19 @@
                  "width":32,
                  "x":608,
                  "y":576
+                }, 
+                {
+                 "height":32,
+                 "name":"goblin",
+                 "properties":
+                    {
+                     "sprite":":goblin-slave"
+                    },
+                 "type":":creature",
+                 "visible":true,
+                 "width":32,
+                 "x":512,
+                 "y":704
                 }],
          "opacity":1,
          "type":"objectgroup",
