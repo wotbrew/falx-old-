@@ -12,7 +12,7 @@
                            [gdx-loopy "0.1.0-SNAPSHOT"]
                            [gdx-2d "0.1.0-SNAPSHOT"]
                            [clj-tiny-astar "0.1.1-SNAPSHOT"]
-                           [silc "0.1.3"]
+                           [silc "0.1.6"]
                            [cheshire "5.3.1"]
                            [clj-tuple "0.1.7"]]
             :global-vars {*warn-on-reflection* true}

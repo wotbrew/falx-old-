@@ -1,6 +1,6 @@
 (ns falx.point
   (:require [clj-tuple :refer [tuple]])
-  (:refer-clojure :exclude [+ - / *]))
+  (:refer-clojure :exclude [+ - *]))
 
 (def id (tuple 0 0))
 
@@ -11,6 +11,18 @@
 (defn +
   ([[x y] [x2 y2]]
    (tuple (c+ x x2) (c+ y y2))))
+
+(defn -
+  ([[x y] [x2 y2]]
+   (tuple (c- x x2) (c- y y2))))
+
+(defn *
+  ([[x y] [x2 y2]]
+   (tuple (c* x x2) (c* y y2))))
+
+(defn explode
+  [[x y] xn yn]
+  (tuple (c* x xn) (c* y yn)))
 
 (defn north?
   "Is point a (x, y) north of b (x2, y2)"
@@ -74,5 +86,28 @@
    (and (<= (Math/abs ^int (c- x1 x2)) 1)
         (<= (Math/abs ^int (c- y1 y2)) 1))))
 
+(defn magnitude
+  ([[x y]]
+   (magnitude x y))
+  ([x y]
+   (Math/sqrt
+     (c+ (c* x x)
+         (c* y y)))))
+
+(defn normalize
+  ([[x y]]
+   (normalize x y))
+  ([x y]
+   (let [m (magnitude x y)]
+     (tuple (/ x m)
+            (/ y m)))))
+
+(defn direction
+  [a b]
+  (normalize (- b a)))
+
+(defn intify
+  [[x y]]
+  (tuple (int x) (int y)))
 
 

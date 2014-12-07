@@ -48,8 +48,6 @@
   [a b]
   (int (/ a b)))
 
-
-
 (defmulti apply-command (fn [m command] command))
 
 (defmethod apply-command :default
@@ -96,8 +94,11 @@
    and pt will return the entities at
    the point that meet the predicate"
   [pred]
-  (fn [game pt]
-    (filter #(pred game %) (at game pt))))
+  (fn
+    ([game map pt]
+     (filter #(pred game %) (at game map pt)))
+    ([game pt]
+     (filter #(pred game %) (at game pt)))))
 
 (defn at-mouse-fn
   "Returns a function that when passed a game
@@ -114,6 +115,9 @@
   (fn [game e] (att game e k)))
 
 (defn type-is-fn
+  "Returns a function that when passed a game
+   and entity will return whether the type is equal to that
+   which was used to create a function"
   [type]
   (fn [game e] (= type (att game e :type))))
 
@@ -129,6 +133,14 @@
 (def creature-at-mouse
   "Return the entities at the mouse position"
   (comp first (at-mouse-fn creature?)))
+
+(defn player?
+  [m e]
+  (att m e :player?))
+
+(defn enemy?
+  [m e]
+  (att m e :enemy?))
 
 (def selected?
   "Is the entity selected?"
@@ -152,11 +164,21 @@
 (defn selectable?
   "Is the given entity selectable"
   [m e]
-  (and (creature? m e)))
+  (and (creature? m e)
+       (player? m e)))
 
-(def selectable-at (at-fn selectable?))
-(def selectable-at? (comp boolean first selectable-at))
-(def selectable-at-mouse  (comp first (at-mouse-fn selectable?)))
+(def selectable-at
+  "Get the selectable entity at the given point or nil"
+  (at-fn selectable?))
+
+(def selectable-at?
+  "Is (any) entity at the given point selectable?"
+  (comp boolean first selectable-at))
+
+(def selectable-at-mouse
+  "Gets the selectable entity at the mouse position
+   or nil"
+  (comp first (at-mouse-fn selectable?)))
 
 (defn select
   "Selects the entity"
@@ -194,8 +216,12 @@
       (= :wall (att m e :terrain))
       (creature? m e)))
 
-(def solid-at (at-fn solid?))
-(def solid-at? (comp boolean first solid-at))
+(def solid-at
+  "Returns a seq of solid entities at the given point"
+  (at-fn solid?))
+
+(def solid-at?
+  (comp boolean first solid-at))
 
 (defn goto
   "LOL - doesn't perform a goto.
@@ -228,14 +254,25 @@
   [m map]
   [(att m map :width) (att m map :height)])
 
+(defn adjacent-to?
+  "Is the entity adjacent to the given point?"
+  [m e pt]
+  (when-let [pos (pos m e)]
+    (pt/adj? pos pt)))
+
+(defn adjacent?
+  "Are the 2 entities adjacent to each other?"
+  [m a b]
+  (when-let [pos (pos m b)]
+    (adjacent-to? m a pos)))
+
 (defn can-move?
   "Can the entity move to the point
    - is it possible?"
   [m e pt]
   (and
     (not (solid-at? m pt))
-    (when-let [pos (pos m e)]
-      (pt/adj? pos pt))))
+    (adjacent-to? m e pt)))
 
 (defn move
   "Attempt to move the entity from its current position
@@ -244,6 +281,43 @@
   (if (can-move? m e pt)
     (set-att m e :pos pt)
     m))
+
+(defn can-attack?
+  "Can the given entity `a` attack the other one `b`
+   - is it possible?"
+  [m a b]
+  (and
+    (not= a b)
+    (creature? m a)
+    (creature? m b)
+    (adjacent? m a b)))
+
+(defn attackable?
+  "Is the given entity attackable by the (first) selected entity"
+  [m e]
+  (and
+    (enemy? m e)
+    (can-attack? m e (first (selected m)))))
+
+(def attackable-at-mouse
+  "Get the attackable entity at the mouse position if possible or nil"
+  (comp first (at-mouse-fn attackable?)))
+
+(defn attack-offset
+  "Returns the offset point to use when
+   entity a attacks entity b"
+  [m a b]
+  (let [pa (pos m a)
+        pb (pos m b)]
+    (pt/explode (pt/direction pa pb) 8 -8)))
+
+(defn attack-at-mouse
+  [m]
+  (let [e (first (selected m))
+        target (creature-at-mouse m)]
+    (if (can-attack? m e target)
+      (set-att m e :offset (attack-offset m e target))
+      m)))
 
 ;;commands
 
@@ -282,13 +356,15 @@
 (defmethod apply-command :primary
   [m _]
   (cond
-    (creature-at-mouse m) (select-at-mouse m)
+    (selectable-at-mouse m) (select-at-mouse m)
+    (attackable-at-mouse m) (attack-at-mouse m)
     :else (selected-goto-mouse m)))
 
 ;;brain
-(def brain-tick 20)
+(def brain-tick 100)
 (def brain-spawner-tick 500)
 (def walk-tick 125)
+(def animate-tick 50)
 
 (defn path
   [game e to]
@@ -362,12 +438,33 @@
                   (<! (attempt-walk! e pa)))
                 (forget-goto! e))))))
 
+(defn unoffset!
+  [e offset]
+  (go-loop
+    [offset offset]
+    (if-not (= offset pt/id)
+      (do
+        (send game set-att e :offset
+              (pt/intify (pt/+ offset (pt/direction offset pt/id))))
+        (<! (timeout animate-tick))
+        (recur (att @game e :offset pt/id)))
+      (do
+        (debug e "offset undone")
+        (send game delete-att e :offset)))))
+
+(defn banimate!
+  [e]
+  (go
+    (when-let [offset (att @game e :offset)]
+      (debug e "undoing offset")
+      (<! (unoffset! e offset)))))
 
 (defn do-brain!
   "Performed on each brain tick"
   [e]
   (go
-    (<! (bwalk! e))))
+    (<! (bwalk! e))
+    (<! (banimate! e))))
 
 (defn do-brain-spawning!
   []
@@ -685,6 +782,9 @@
 
 (defn draw-creature-circle!
   [game e x y]
+  (when (enemy? game e)
+    (g/with-color color/red
+      (g/draw-point! :selected x y)))
   (when (selected? game e)
     (g/with-color color/green
       (g/draw-point! :selected x y))))
@@ -692,14 +792,19 @@
 (defn draw-creature!
   [game e x y]
   (draw-creature-circle! game e x y)
-  (when-let [sprite (att game e :sprite)]
-    (g/draw-point! sprite x y)))
+  (let [[xo yo] (att game e :offset pt/id)
+        x (+ xo x)
+        y (+ yo y)]
+    (when-let [sprite (att game e :sprite)]
+      (g/draw-point! sprite x y))))
 
 (defn draw-creature-layer!
   [game map* cw ch]
   (doseq [e (entities-in-layer game map* :creature)]
     (when-let [[x y] (att game e :pos)]
-      (draw-creature! game e (* x cw) (* y (- ch))))))
+      (let [x (* x cw)
+            y (* y (- ch))]
+        (draw-creature! game e x y)))))
 
 (defn draw-map!
   [game]
@@ -713,6 +818,7 @@
 (defn mouse-sprite
   [game]
   (cond
+    (attackable-at-mouse game) :mouse-attack
     (selectable-at-mouse game) :mouse-select
     :else :mouse))
 
@@ -779,8 +885,6 @@
     "set the map to be the example map"
     (do (send game assoc :map :test-map) nil))
 
-  "Move the camera"
-  (do (swap! game assoc :cam [0 0]) nil)
 
   "reset the game to its default"
   (do (restart-agent game default-game)

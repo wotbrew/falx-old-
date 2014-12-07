@@ -185,6 +185,7 @@
                  "name":"goblin",
                  "properties":
                     {
+                     "enemy?":"true",
                      "sprite":":goblin-slave"
                     },
                  "type":":creature",
@@ -211,6 +212,7 @@
                  "name":"goblin",
                  "properties":
                     {
+                     "player?":"true",
                      "sprite":":goblin-slave"
                     },
                  "type":":creature",
@@ -218,6 +220,20 @@
                  "width":32,
                  "x":512,
                  "y":704
+                }, 
+                {
+                 "height":32,
+                 "name":"goblin",
+                 "properties":
+                    {
+                     "player?":"true",
+                     "sprite":":goblin-slave"
+                    },
+                 "type":":creature",
+                 "visible":true,
+                 "width":32,
+                 "x":512,
+                 "y":768
                 }],
          "opacity":1,
          "type":"objectgroup",

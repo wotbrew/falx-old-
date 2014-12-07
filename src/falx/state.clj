@@ -11,7 +11,7 @@
   "The initial value of the game"
   (->
     {}
-    (with-indexes)
+    (with-indexes :player? :enemy? :type)
     (with-composite-indexes #{:map :layer}
                             #{:map :pos})))
 
