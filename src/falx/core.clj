@@ -48,6 +48,13 @@
   [a b]
   (int (/ a b)))
 
+;;move to silc
+(defn update-att
+  "Applies the function f (plus any args)
+   to the value for the attribute `a` on entity `e`"
+  [m e a f & args]
+  (set-att m e a (apply f (att m e a) args)))
+
 (defmulti apply-command (fn [m command] command))
 
 (defmethod apply-command :default
@@ -266,13 +273,19 @@
   (when-let [pos (pos m b)]
     (adjacent-to? m a pos)))
 
-(defn can-move?
-  "Can the entity move to the point
-   - is it possible?"
+(defn could-move?
+  "Could the entity move to the point
+   if not for itself due to lack of stamina/ap etc"
   [m e pt]
   (and
     (not (solid-at? m pt))
     (adjacent-to? m e pt)))
+
+(defn can-move?
+  "Can the entity move to the point
+   - is it possible?"
+  [m e pt]
+  (and (could-move? m e pt)))
 
 (defn move
   "Attempt to move the entity from its current position
@@ -311,16 +324,58 @@
         pb (pos m b)]
     (pt/explode (pt/direction pa pb) 8 -8)))
 
+(defn defend-offset
+  "Returns the offset point to use for
+   defence when a defends against b"
+  [m a b]
+  (let [pa (pos m a)
+        pb (pos m b)]
+    (pt/explode (pt/direction pb pa) 4 -4)))
+
+(defn set-attack-offsets
+  "Sets the offset positions used for attacking and defending"
+  [m e target]
+  (-> (set-att m e
+               :offset (attack-offset m e target))
+      (set-att target
+               :offset (defend-offset m target e)
+               :hit-time 4)))
+
+(defn entity-world-text
+  [m e text color]
+  {:text text
+   :color color
+   :pos (pos m e)
+   :time 30})
+
+(defn create-attacked-text
+  "Creates the attacked text at the target.
+   (hovers above the entities head)"
+  [m target]
+  (update m :world-text conj
+          (entity-world-text m target "hit" color/red)))
+
+(defn just-attack
+  "Has `e` attack `target`"
+  [m e target]
+  (-> (set-attack-offsets m e target)
+      (create-attacked-text target)))
+
+(defn attack
+  "Has `e` attack `target` if possible"
+  [m e target]
+  (if (can-attack? m e target)
+    (just-attack m e target)
+    m))
+
 (defn attack-at-mouse
+  "Attacks the creature at the current mouse position"
   [m]
   (let [e (first (selected m))
         target (creature-at-mouse m)]
-    (if (can-attack? m e target)
-      (set-att m e :offset (attack-offset m e target))
-      m)))
+    (attack m e target)))
 
 ;;commands
-
 (def cam-slow-speed
   500)
 
@@ -360,11 +415,66 @@
     (attackable-at-mouse m) (attack-at-mouse m)
     :else (selected-goto-mouse m)))
 
+
+(def anim-speed 100)
+
+;;events - unoffset
+(defn tick-offset
+  [offset delta]
+  (pt/+ offset (pt/explode (pt/direction offset pt/id) delta delta)))
+
+(defn animate-offset
+  "Animate the offset on the given entity
+   this changes depending on the animation speed
+   this is the offset added after certain actions"
+  [m e]
+  (let [[x y] (att m e :offset)]
+    (if (and (<= -1 x 1) (<= -1 y 1))
+      (delete-att m e :offset)
+      (update-att m e :offset tick-offset (* (:delta m 0) (/ anim-speed 4))))))
+
+(defn animate-offsets
+  "Animates the offsets of any entity that has one"
+  [m]
+  (reduce animate-offset m (having m :offset)))
+
+(defn animate-hit-frame
+  "Animates the hit frame of the given entity
+   this makes the entity flash red for a time after being attacked"
+  [m e]
+  (let [time (att m e :hit-time)]
+    (if (<= time 0)
+      (delete-att m e :hit-time)
+      (update-att m e :hit-time -  (* (:delta m 0) (/ anim-speed 4))))))
+
+(defn animate-hit-frames
+  "Animates the hit frames of any entity that has them"
+  [m]
+  (reduce animate-hit-frame m (having m :hit-time)))
+
+
+(defn animate-world-text
+  [m world-text]
+  (when (pos? (:time world-text))
+    (update world-text :time - (* (:delta m 0) (/ anim-speed 4)))))
+
+(defn animate-word-texts
+  [m]
+  (update m :world-text #(keep (partial animate-world-text m) %)))
+
+(defn simulate
+  "Performs any necessary ambient simulation steps
+   (like animation)"
+  [m]
+  (-> m
+      animate-offsets
+      animate-hit-frames
+      animate-word-texts))
+
 ;;brain
+(def walk-tick 125)
 (def brain-tick 100)
 (def brain-spawner-tick 500)
-(def walk-tick 125)
-(def animate-tick 50)
 
 (defn path
   [game e to]
@@ -400,16 +510,12 @@
       [[p & rest] path]
       (cond
         (not p) (debug e "is done walking")
-        (not= target (att @game e :goto)) (do
-                                            (debug e "goto target changed - repathing")
-                                            (<! (bwalk! e)))
+        (not= target (att @game e :goto)) (debug e "goto target changed - repathing")
         :else (do
                 (debug e "moving to" p)
                 (<! (attempt-move! e p))
                 (if (not= (pos @game e) p)
-                  (do
-                    (debug e "could not move due to unforseen obstacle - repathing")
-                    (<! (bwalk! e)))
+                  (debug e "could not move due to unforseen obstacle - repathing")
                   (recur rest)))))))
 
 (defn bwalk-at-goal!
@@ -438,33 +544,13 @@
                   (<! (attempt-walk! e pa)))
                 (forget-goto! e))))))
 
-(defn unoffset!
-  [e offset]
-  (go-loop
-    [offset offset]
-    (if-not (= offset pt/id)
-      (do
-        (send game set-att e :offset
-              (pt/intify (pt/+ offset (pt/direction offset pt/id))))
-        (<! (timeout animate-tick))
-        (recur (att @game e :offset pt/id)))
-      (do
-        (debug e "offset undone")
-        (send game delete-att e :offset)))))
 
-(defn banimate!
-  [e]
-  (go
-    (when-let [offset (att @game e :offset)]
-      (debug e "undoing offset")
-      (<! (unoffset! e offset)))))
 
 (defn do-brain!
   "Performed on each brain tick"
   [e]
   (go
-    (<! (bwalk! e))
-    (<! (banimate! e))))
+    (<! (bwalk! e))))
 
 (defn do-brain-spawning!
   []
@@ -650,7 +736,8 @@
                            :mouse-world world-mouse
                            :delta delta)
                     (assoc-with :mouse-cell mouse-cell)
-                    (apply-commands commands)))))
+                    (apply-commands commands)
+                    simulate))))
 
 ;;debug
 
@@ -791,7 +878,6 @@
 
 (defn draw-creature!
   [game e x y]
-  (draw-creature-circle! game e x y)
   (let [[xo yo] (att game e :offset pt/id)
         x (+ xo x)
         y (+ yo y)]
@@ -804,7 +890,11 @@
     (when-let [[x y] (att game e :pos)]
       (let [x (* x cw)
             y (* y (- ch))]
-        (draw-creature! game e x y)))))
+        (draw-creature-circle! game e x y)
+        (g/with-color (if (att game e :hit-time)
+                        color/red
+                        color/white)
+          (draw-creature! game e x y))))))
 
 (defn draw-map!
   [game]
@@ -814,6 +904,15 @@
       (draw-basic-layer! game (:map game) :decor cw ch)
       (draw-basic-layer! game (:map game) :object cw ch)
       (draw-creature-layer! game (:map game) cw ch))))
+
+(defn draw-world-texts!
+  [game]
+  (let [[cw ch] (cell-size game)]
+    (doseq [world-text (:world-text game)]
+      (g/with-font-color (:color world-text)
+        (when-let [[x y] (:pos world-text)]
+          (let [y (- (* y (- ch)) -64 (max (:time world-text) 15))]
+            (g/draw-text! (:text world-text) (* cw x) y)))))))
 
 (defn mouse-sprite
   [game]
@@ -843,6 +942,7 @@
           (g/with-camera @cam
             (try
               (draw-map! game)
+              (draw-world-texts! game)
               (catch Throwable e
                 (.printStackTrace e))))
           (draw-screen-positions! game)
