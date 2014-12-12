@@ -142,8 +142,19 @@
   (comp first (at-mouse-fn creature?)))
 
 (defn player?
+  "Returns whether the given entity is a player"
   [m e]
   (att m e :player?))
+
+(defn players
+  "Returns the set of all the players"
+  [m]
+  (all m :player?))
+
+(defn player
+  "Selects the nth player"
+  [m n]
+  (nth (seq (players m)) n nil))
 
 (defn enemy?
   [m e]
@@ -348,18 +359,27 @@
    :pos (pos m e)
    :time 30})
 
+(defn add-world-text
+  [m world-text]
+  (update m :world-text conj world-text))
+
 (defn create-attacked-text
   "Creates the attacked text at the target.
    (hovers above the entities head)"
-  [m target]
-  (update m :world-text conj
-          (entity-world-text m target "hit" color/red)))
+  [m e]
+  (add-world-text m (entity-world-text m e "*whack*" color/red)))
+
+(defn create-attack-bark
+  "Creates the attack bark at the entity"
+  [m e]
+  (add-world-text m (entity-world-text m e "haha!" color/white)))
 
 (defn just-attack
   "Has `e` attack `target`"
   [m e target]
   (-> (set-attack-offsets m e target)
-      (create-attacked-text target)))
+      (create-attacked-text target)
+      (create-attack-bark e)))
 
 (defn attack
   "Has `e` attack `target` if possible"
@@ -415,10 +435,32 @@
     (attackable-at-mouse m) (attack-at-mouse m)
     :else (selected-goto-mouse m)))
 
+(defmethod apply-command :select-1
+  [m _]
+  (perform-select m (player m 0)))
+
+(defmethod apply-command :select-2
+  [m _]
+  (perform-select m (player m 1)))
+
+(defmethod apply-command :select-3
+  [m _]
+  (perform-select m (player m 2)))
+
+(defmethod apply-command :select-4
+  [m _]
+  (perform-select m (player m 3)))
+
+(defmethod apply-command :select-5
+  [m _]
+  (perform-select m (player m 4)))
+
+(defmethod apply-command :select-6
+  [m _]
+  (perform-select m (player m 5)))
 
 (def anim-speed 100)
 
-;;events - unoffset
 (defn tick-offset
   [offset delta]
   (pt/+ offset (pt/explode (pt/direction offset pt/id) delta delta)))
