@@ -1,8 +1,20 @@
 {:sword ["Weapons" [32 0 32 32]]
  :javelin ["Weapons" [32 32 32 32]]
+
  :goblin-slave ["Goblins" [0 0 32 32]]
+
  :selected ["Misc" [0 0 32 32]]
+
+ :blank ["Gui" [0 0 32 32]]
+
  :mouse ["Mouse" [0 0 32 32]]
  :mouse-select ["Mouse" [32 0 32 32]]
  :mouse-attack ["Mouse" [64 0 32 32]]
- :mouse-attack-grey ["Mouse" [96 0 32 32]]}
+ :mouse-attack-grey ["Mouse" [96 0 32 32]]
+
+
+ :dwarf-female ["Dwarf" [0 0 32 32]]
+ :dwarf-male ["Dwarf" [32 0 32 32]]
+
+ :human-female ["Human" [0 0 32 32]]
+ :human-male ["Human" [32 0 32 32]]}

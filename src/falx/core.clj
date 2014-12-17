@@ -18,7 +18,8 @@
              [base :refer :all]
              [state :refer :all :as state]
              [input :as input]
-             [point :as pt]]))
+             [point :as pt]
+             [rect :as rect]]))
 
 (defn ind
   "Maps 2d co-ordinates to a one dimensional co-ordinate given the width of the rectangular plane."
@@ -513,6 +514,102 @@
       animate-hit-frames
       animate-word-texts))
 
+;;screen
+
+(def default-cell-size
+  "The default cell size used by the game"
+  [32 32])
+
+(defn cell-size
+  "Return the cell size used by the game"
+  [m]
+  (:cell-size m default-cell-size))
+
+(def cell-width (comp first cell-size))
+(def cell-height (comp second cell-size))
+
+(defn mouse-cell
+  "Return the pt x,y in the world
+  that the mouse is currently over."
+  [m]
+  (let [[x y] (or (:mouse-world m) pt/id)
+        [w h] (cell-size m)]
+    (tuple (idiv x w)
+           (idiv (- y h) (- h)))))
+
+(defn screen
+  [m]
+  (:screen m default-size))
+
+(def width "Get the current screen width" (comp first screen))
+(def height "Get the current screen height" (comp second screen))
+
+(defn bottom-left
+  [_]
+  [0 0])
+
+(defn bottom-middle
+  [m]
+  [(/ (width m) 2) 0])
+
+(defn bottom-right
+  [m]
+  [(width m) 0])
+
+(defn middle
+  [m]
+  [(/ (width m) 2) (/ (height m) 2)])
+
+(defn middle-left
+  [m]
+  [0 (/ (height m) 2)])
+
+(defn middle-right
+  [m]
+  [(width m) (/ (height m) 2)])
+
+(defn top-left
+  [m]
+  [0 (height m)])
+
+(defn top-middle
+  [m]
+  [(/ (width m) 2) (height m)])
+
+(defn top-right
+  [m]
+  [(width m) (height m)])
+
+(defn game-buffer
+  "Returns the game buffer rect relative to the current screen origin"
+  [game]
+  (tuple 5 0
+         (- (idiv (width game) (cell-width game)) 10)
+         (- (idiv (height game) (cell-height game)) 7)))
+
+(defn left-buffer
+  "Returns the left buffer rect relative to the current screen origin."
+  [game]
+  (tuple 0 0 4 (idiv (height game) (cell-height game))))
+
+(defn bottom-buffer
+  "Returns the bottom buffer rect relative to the current screen origin."
+  [game]
+  (tuple 0 6 (idiv (width game) (cell-width game)) 6))
+
+(defn right-buffer
+  "Returns the right buffer rect relative to the current screen origin."
+  [game]
+  (tuple (- (idiv (width game) (cell-width game)) 4) 0 4 (idiv (height game) (cell-height game))))
+
+(defn mouse-in-game?
+  "Is the mouse currently in the game buffer?"
+  [game]
+  (let [[x y w h] (game-buffer game)
+        [mx my] (:mouse-screen game pt/id)
+        [cw ch] (cell-size game)]
+    (rect/pt-in? (* x cw) (* y ch) (* w cw) (* h ch) mx my)))
+
 ;;brain
 (def walk-tick 125)
 (def brain-tick 100)
@@ -741,23 +838,6 @@
   []
   (tuple (gdx-width) (gdx-height)))
 
-(def default-cell-size
-  "The default cell size used by the game"
-  [32 32])
-
-(defn cell-size
-  "Return the cell size used by the game"
-  [m]
-  (:cell-size m default-cell-size))
-
-(defn mouse-cell
-  "Return the pt x,y in the world
-  that the mouse is currently over."
-  [m]
-  (let [[x y] (or (:mouse-world m) pt/id)
-        [w h] (cell-size m)]
-    (tuple (idiv x w)
-           (idiv (- y h) (- h)))))
 
 (defn update!
   "Called every frame"
@@ -809,53 +889,9 @@
     (concat [(select-keys game [:fps :screen :map])
              (select-keys game [:mouse-screen :mouse-world :mouse-cell])
              (str "commands: " (:commands game))
+             (str "in-game? " (mouse-in-game? game))
              ""]
             (map #(debug-entity-attributes game %) (at-mouse game)))))
-
-;;screen
-
-(defn screen
-  [m]
-  (:screen m default-size))
-
-(def width "Get the current screen width" (comp first screen))
-(def height "Get the current screen height" (comp second screen))
-
-(defn bottom-left
-  [_]
-  [0 0])
-
-(defn bottom-middle
-  [m]
-  [(/ (width m) 2) 0])
-
-(defn bottom-right
-  [m]
-  [(width m) 0])
-
-(defn middle
-  [m]
-  [(/ (width m) 2) (/ (height m) 2)])
-
-(defn middle-left
-  [m]
-  [0 (/ (height m) 2)])
-
-(defn middle-right
-  [m]
-  [(width m) (/ (height m) 2)])
-
-(defn top-left
-  [m]
-  [0 (height m)])
-
-(defn top-middle
-  [m]
-  [(/ (width m) 2) (height m)])
-
-(defn top-right
-  [m]
-  [(width m) (height m)])
 
 ;;rendering
 
@@ -972,6 +1008,39 @@
       (let [sprite (or (mouse-sprite game) :mouse)]
         (g/draw-point! sprite x (- h y cs))))))
 
+(defn draw-blanks!
+  [x y w h cw ch]
+  (dotimes [xx w]
+    (dotimes [yy h]
+      (let [x (* cw (+ x xx))
+            y (* ch (+ y yy))]
+        (g/draw-point! :blank x y)))))
+
+(defn draw-black!
+  [x y w h]
+  (g/with-color color/black
+    (g/draw-quad! @state/pixel x y w h)))
+
+(defn draw-buffers!
+  [game]
+  (let [[cw ch] (cell-size game)]
+    (let [[x y w h] (left-buffer game)]
+      (draw-black! (* x cw) (* y ch) (* w cw) (* h ch))
+      (draw-blanks! w 0 1 h cw ch))
+    (let [[x y w h] (right-buffer game)]
+      (draw-black! (* x cw) (* y 32) (* w cw) (* h ch))
+      (draw-blanks! (dec x) 0 1 h cw ch))
+    (let [[x y w h] (bottom-buffer game)]
+      (draw-black! (* x cw) (* y ch) (* w cw) (* h (- ch)))
+      (draw-blanks! 0 h w 1 cw ch))))
+
+(defn draw-ui!
+  [game]
+  (draw-buffers! game)
+  (draw-screen-positions! game)
+  (draw-debug! game)
+  (draw-mouse! game))
+
 (defn render!
   []
   (update!)
@@ -987,9 +1056,7 @@
               (draw-world-texts! game)
               (catch Throwable e
                 (.printStackTrace e))))
-          (draw-screen-positions! game)
-          (draw-debug! game)
-          (draw-mouse! game))))))
+          (draw-ui! game))))))
 
 ;;examples
 

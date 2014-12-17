@@ -209,11 +209,11 @@
                 }, 
                 {
                  "height":32,
-                 "name":"goblin",
+                 "name":"man",
                  "properties":
                     {
                      "player?":"true",
-                     "sprite":":goblin-slave"
+                     "sprite":":human-male"
                     },
                  "type":":creature",
                  "visible":true,
@@ -223,16 +223,44 @@
                 }, 
                 {
                  "height":32,
-                 "name":"goblin",
+                 "name":"shedwarf",
                  "properties":
                     {
                      "player?":"true",
-                     "sprite":":goblin-slave"
+                     "sprite":":dwarf-female"
+                    },
+                 "type":":creature",
+                 "visible":true,
+                 "width":32,
+                 "x":480,
+                 "y":704
+                }, 
+                {
+                 "height":32,
+                 "name":"woman",
+                 "properties":
+                    {
+                     "player?":"true",
+                     "sprite":":human-female"
                     },
                  "type":":creature",
                  "visible":true,
                  "width":32,
                  "x":512,
+                 "y":768
+                }, 
+                {
+                 "height":32,
+                 "name":"dwarf",
+                 "properties":
+                    {
+                     "player?":"true",
+                     "sprite":":dwarf-male"
+                    },
+                 "type":":creature",
+                 "visible":true,
+                 "width":32,
+                 "x":480,
                  "y":768
                 }],
          "opacity":1,

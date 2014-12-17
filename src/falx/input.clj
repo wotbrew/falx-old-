@@ -121,6 +121,7 @@
    [:pressed :s, :cam-down]
    [:pressed :lshift, :mod]
    [:hit :left, :primary]
+   [:pressed :left, :primary-hold]
    [:hit :f1, :select-1]
    [:hit :f2, :select-2]
    [:hit :f3, :select-3]
