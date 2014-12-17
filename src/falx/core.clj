@@ -583,32 +583,46 @@
 (defn game-buffer
   "Returns the game buffer rect relative to the current screen origin"
   [game]
-  (tuple 5 0
-         (- (idiv (width game) (cell-width game)) 10)
-         (- (idiv (height game) (cell-height game)) 7)))
+  (tuple (* 5 32) (* 7 32)
+         (- (width game) (* 10 32))
+         (- (height game) (* 7 32))))
 
 (defn left-buffer
   "Returns the left buffer rect relative to the current screen origin."
   [game]
-  (tuple 0 0 4 (idiv (height game) (cell-height game))))
+  (tuple 0 0 (* 4 32) (height game)))
 
 (defn bottom-buffer
   "Returns the bottom buffer rect relative to the current screen origin."
   [game]
-  (tuple 0 6 (idiv (width game) (cell-width game)) 6))
+  (tuple 0 0 (width game) (* 6 32)))
 
 (defn right-buffer
   "Returns the right buffer rect relative to the current screen origin."
   [game]
-  (tuple (- (idiv (width game) (cell-width game)) 4) 0 4 (idiv (height game) (cell-height game))))
+  (tuple (- (width game) (* 4 32)) 0 (* 4 32) (height game)))
+
+(defn player-buffer
+  "Returns the buffer relevant to the screen origin
+   for the given player (by n)"
+  [game n]
+  (let [[x y _ _] (if (< n 3) (left-buffer game) (right-buffer game))]
+    (tuple x (+ y 224 (* (mod n 3) 192)) 128 160)))
+
+(defn mouse-in?
+  "Is the mouse currently in the given rect"
+  ([game [x y w h]]
+   (mouse-in? game x y w h))
+  ([game x y w h]
+   (let [[mx my] (:mouse-screen game pt/id)
+         [sw sh] (screen game)
+         my (- sh my)]
+     (rect/pt-in? x y w h mx my))))
 
 (defn mouse-in-game?
   "Is the mouse currently in the game buffer?"
   [game]
-  (let [[x y w h] (game-buffer game)
-        [mx my] (:mouse-screen game pt/id)
-        [cw ch] (cell-size game)]
-    (rect/pt-in? (* x cw) (* y ch) (* w cw) (* h ch) mx my)))
+   (mouse-in? game (game-buffer game)))
 
 ;;brain
 (def walk-tick 125)
@@ -920,8 +934,9 @@
 (defn draw-debug!
   "Draws some useful debug information to the screen"
   [game]
-  (let [[x y] (top-left game)]
-    (g/draw-text! (debug-str game) x y)))
+  (let [[x] (game-buffer game)
+        [_ sh] (screen game)]
+    (g/draw-text! (debug-str game) x sh)))
 
 (defn entities-in-layer
   "Return the set of entities in the map and layer"
@@ -1009,12 +1024,14 @@
         (g/draw-point! sprite x (- h y cs))))))
 
 (defn draw-blanks!
-  [x y w h cw ch]
-  (dotimes [xx w]
-    (dotimes [yy h]
-      (let [x (* cw (+ x xx))
-            y (* ch (+ y yy))]
-        (g/draw-point! :blank x y)))))
+  ([x y w h]
+   (draw-blanks! x y w h 32 32))
+  ([x y w h cw ch]
+   (dotimes [xx (idiv w cw)]
+     (dotimes [yy (idiv h ch)]
+       (let [x (+ x (* xx cw))
+             y (+ y (* yy ch))]
+         (g/draw-point! :blank x y))))))
 
 (defn draw-black!
   [x y w h]
@@ -1023,20 +1040,44 @@
 
 (defn draw-buffers!
   [game]
-  (let [[cw ch] (cell-size game)]
-    (let [[x y w h] (left-buffer game)]
-      (draw-black! (* x cw) (* y ch) (* w cw) (* h ch))
-      (draw-blanks! w 0 1 h cw ch))
-    (let [[x y w h] (right-buffer game)]
-      (draw-black! (* x cw) (* y 32) (* w cw) (* h ch))
-      (draw-blanks! (dec x) 0 1 h cw ch))
-    (let [[x y w h] (bottom-buffer game)]
-      (draw-black! (* x cw) (* y ch) (* w cw) (* h (- ch)))
-      (draw-blanks! 0 h w 1 cw ch))))
+  (let [[x y w h] (left-buffer game)]
+    (draw-black! x y w h)
+    (draw-blanks! w 0 32 h 32 32))
+  (let [[x y w h] (right-buffer game)]
+    (draw-black! x y w h)
+    (draw-blanks! (- x 32) 0 32 h 32 32))
+  (let [[x y w h] (bottom-buffer game)]
+    (draw-black! x y w h)
+    (draw-blanks! 0 h w 32 32 32)))
+
+(defn draw-box!
+  ([color x y w h]
+   (g/with-color color
+     (draw-box! x y w h)))
+  ([x y w h]
+   (let [p @state/pixel]
+     (g/draw-quad! p x y 1 h)
+     (g/draw-quad! p (+ x w -1) y 1 h)
+     (g/draw-quad! p x y w 1)
+     (g/draw-quad! p x (+ y h -1) w 1))))
+
+(defn draw-player!
+  [game n]
+  (let [[x y w h] (player-buffer game n)
+        color (if (mouse-in? game x y w h)
+                color/white
+                color/green)]
+    (draw-box! color x y w h)))
+
+(defn draw-players!
+  [game]
+  (dotimes [n 6]
+    (draw-player! game n)))
 
 (defn draw-ui!
   [game]
   (draw-buffers! game)
+  (draw-players! game)
   (draw-screen-positions! game)
   (draw-debug! game)
   (draw-mouse! game))
