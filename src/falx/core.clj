@@ -1061,18 +1061,21 @@
      (g/draw-quad! p x y w 1)
      (g/draw-quad! p x (+ y h -1) w 1))))
 
+
 (defn draw-player!
-  [game n]
-  (let [[x y w h] (player-buffer game n)
-        color (if (mouse-in? game x y w h)
-                color/white
-                color/green)]
+  [game player buffer]
+  (let [[x y w h] buffer
+        color (cond
+                (mouse-in? game x y w h) color/yellow
+                (selected? game player) color/green
+                :else color/white)]
     (draw-box! color x y w h)))
 
 (defn draw-players!
   [game]
   (dotimes [n 6]
-    (draw-player! game n)))
+    (when-let [player (player game n)]
+      (draw-player! game player (player-buffer game n)))))
 
 (defn draw-ui!
   [game]
