@@ -1061,15 +1061,20 @@
      (g/draw-quad! p x y w 1)
      (g/draw-quad! p x (+ y h -1) w 1))))
 
-
-(defn draw-player!
-  [game player buffer]
-  (let [[x y w h] buffer
-        color (cond
+(defn draw-player-backing!
+  [game player x y w h]
+  (let [color (cond
                 (mouse-in? game x y w h) color/yellow
                 (selected? game player) color/green
                 :else color/white)]
     (draw-box! color x y w h)))
+
+(defn draw-player!
+  [game player buffer]
+  (let [[x y w h] buffer]
+    (draw-player-backing! game player x y w h)
+    (when-let [spr (att game player :sprite)]
+      (g/draw-quad! spr (+ x 32) (+ y 64) 64 64))))
 
 (defn draw-players!
   [game]
