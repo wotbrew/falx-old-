@@ -152,10 +152,14 @@
   [m]
   (all m :player?))
 
+(defn sorted-players
+  [m]
+  (sort (players m)))
+
 (defn player
   "Selects the nth player"
   [m n]
-  (nth (seq (players m)) n nil))
+  (nth (seq (sorted-players m)) n nil))
 
 (defn enemy?
   [m e]
@@ -609,8 +613,8 @@
   "Returns the buffer relevant to the screen origin
    for the given player (by n)"
   [game n]
-  (let [[x y _ _] (if (< n 3) (left-buffer game) (right-buffer game))]
-    (tuple x (+ y 224 (* (mod n 3) 192)) 128 160)))
+  (let [[x y _ h] (if (< n 3) (left-buffer game) (right-buffer game))]
+    (tuple x (+ y h -160 (* (mod n 3) -192)) 128 160)))
 
 (defn mouse-in?
   "Is the mouse currently in the given rect"
@@ -829,7 +833,6 @@
        :layer (keyword name)
        :map map-name
        :tid (get data (ind x y width))})))
-
 
 (defn tiles
   "Return a seq of all the tiles in a tiled map.
@@ -1102,7 +1105,8 @@
   (let [[x y w h] buffer]
     (draw-player-backing! game player x y w h)
     (when-let [spr (att game player :sprite)]
-      (g/draw-quad! spr (+ x 32) (+ y 64) 64 64))))
+      (g/draw-text! (str "eid " player) (+ x 8) (+ y h -8))
+      (g/draw-quad! spr (+ x 32) (+ y h -96) 64 64))))
 
 (defn draw-players!
   [game]
