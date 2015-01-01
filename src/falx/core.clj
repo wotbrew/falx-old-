@@ -429,12 +429,15 @@
   [m _]
   (update m :cam (fnil pt/+ [0 0]) [(cam-shift m) 0]))
 
-(defmethod apply-command :primary
-  [m _]
+
+(defn handle-primary-in-game
+  [m]
   (cond
+
     (selectable-at-mouse m) (select-at-mouse m)
     (attackable-at-mouse m) (attack-at-mouse m)
     :else (selected-goto-mouse m)))
+
 
 (defmethod apply-command :select-1
   [m _]
@@ -615,7 +618,7 @@
    (mouse-in? game x y w h))
   ([game x y w h]
    (let [[mx my] (:mouse-screen game pt/id)
-         [sw sh] (screen game)
+         [_ sh] (screen game)
          my (- sh my)]
      (rect/pt-in? x y w h mx my))))
 
@@ -623,6 +626,31 @@
   "Is the mouse currently in the game buffer?"
   [game]
    (mouse-in? game (game-buffer game)))
+
+;;mouse clicks
+(defn handle-primary-player-buffers
+  "Handles clicks in the player buffers area"
+  [m]
+  (loop [m m
+         n 0]
+    (if (< n 6)
+      (let [buffer (player-buffer m n)]
+        (if (mouse-in? m buffer)
+          (perform-select m (player m n))
+          (recur m (inc n))))
+      m)))
+
+(defn handle-primary-ui
+  "Handles clicks in the ui area"
+  [m]
+  (-> m
+      handle-primary-player-buffers))
+
+(defmethod apply-command :primary
+  [m _]
+  (if (mouse-in-game? m)
+    (handle-primary-in-game m)
+    (handle-primary-ui m)))
 
 ;;brain
 (def walk-tick 125)
