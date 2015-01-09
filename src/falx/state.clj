@@ -1,10 +1,12 @@
 (ns falx.state
   (:import (com.badlogic.gdx.graphics.g2d TextureAtlas TextureRegion)
            (com.badlogic.gdx.files FileHandle)
-           (com.badlogic.gdx.graphics OrthographicCamera))
+           (com.badlogic.gdx.graphics OrthographicCamera)
+           (java.net URL))
   (:require [gdx-2d.core :as g]
             [gdx-loopy.core :refer [on-render-thread]]
             [silc.core :refer :all]
+            [clojure.java.io :as io]
             [clojure.tools.logging :refer [info debug error]]))
 
 (def default-game
@@ -30,7 +32,7 @@
 
 (def settings
   "A map of default settings read in from resources/settings.edn"
-  (read-string (slurp "resources/settings.edn")))
+  (read-string (slurp (io/resource "settings.edn"))))
 
 (def default-size
   "Get the screen size by default"
@@ -43,7 +45,7 @@
 
 (def sprites
   "Contains a map of sprites to their sub region keys read in from resources/sprites.edn"
-  (read-string (slurp "resources/sprites.edn")))
+  (read-string (slurp (io/resource "sprites.edn"))))
 
 (defn cache-region!
   "Cache a given region at the given key"
@@ -52,13 +54,20 @@
   (swap! region-cache assoc key region)
   region)
 
+
 (defn find-file-region
-  "Finds a region from the global atlas for the given file - caches once found."
+  "Finds a region/texture from the global atlas for the given file - caches once found.
+   The first the actual texture file is looked up, else we try in the global atlas (main.png/main.pack)"
   [file]
   (if-let [existing (get @region-cache file)]
     existing
-    (let [region (.findRegion ^TextureAtlas @atlas file)]
-      (cache-region! file region))))
+    (let [fileh (g/file-handle (.getPath ^java.net.URL (io/resource (str "tiles/" file ".png"))))]
+      (if (.exists fileh)
+        (do
+          (info "Local texture preferred to atlas: " file)
+          (cache-region! file (g/texture fileh)))
+        (cache-region! file (.findRegion ^TextureAtlas @atlas file))))))
+
 
 (defn find-sub-region
   "Finds a sub region in the atlas - caches once found."
@@ -107,7 +116,7 @@
     (reset! input nil)
     (reset! font (g/bitmap-font))
     (reset! batch (g/batch))
-    (reset! atlas (g/atlas "resources/tiles/main.pack"))
+    (reset! atlas (g/atlas (.getPath ^URL (io/resource "tiles/main.pack"))))
     (reset! pixel (g/pixel))
     (reset! cam (g/ortho-cam (:width settings) (:height settings)))))
 
