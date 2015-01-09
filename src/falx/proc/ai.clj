@@ -2,9 +2,9 @@
   (:require
     [falx
      [state :as state :refer :all]
-     [base :refer :all]]
+     [base :refer :all]
+     [lifecycle :refer :all]]
     [silc.core :refer :all]
-    [clj-tiny-astar.path :refer [a*]]
     [clojure.tools.logging :refer [debug info]]
     [clojure.core.async :refer [go go-loop <! timeout] :as async]
     [clojure.set :as set]))
@@ -14,15 +14,6 @@
 (def brain-tick 100)
 (def brain-spawner-tick 500)
 
-(defn path
-  [game e to]
-  (go
-    (let [pos (pos game e)
-          map (att game e :map)
-          bounds (map-size game map)
-          pred #(or (= pos %) (not (solid-at? game %)))]
-      (when (and pos map bounds)
-        (a* bounds pred pos to)))))
 
 (declare bwalk!)
 
@@ -76,7 +67,7 @@
         (not goto) true
         (= goto (pos game e)) (bwalk-at-goal! e)
         (solid-at? game goto) (bwalk-goto-now-solid! goto e)
-        :else (if-let [pa (<! (path game e goto))]
+        :else (if-let [pa (path game e goto)]
                 (do
                   (debug e "path to" goto "is" pa)
                   (<! (attempt-walk! e pa)))

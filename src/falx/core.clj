@@ -14,10 +14,12 @@
              [base :refer :all]
              [tiled :refer :all]
              [state :refer :all :as state]
+             [lifecycle :refer :all]
              [input :as input]
              [point :as pt]]
             [falx.proc
-             [ai :as ai]]))
+             [ai :as ai]
+             [ui-pather :as ui-pather]]))
 
 
 ;;tiles
@@ -83,7 +85,7 @@
   [game]
   (str/join
     "\n"
-    (concat [(select-keys game [:fps :screen :map])
+    (concat [(select-keys game [:fps :screen :map :ui-path])
              (select-keys game [:mouse-screen :mouse-world :mouse-cell])
              (str "commands: " (:commands game))
              (str "in-game? " (mouse-in-game? game))
@@ -300,9 +302,16 @@
                 :max-fps 60))
   "Init ze game"
   (init!)
+
+
   (def bs (ai/brain-spawner))
   (start bs)
   (stop bs)
+
+  (def ui-pather (ui-pather/ui-pather))
+  (start ui-pather)
+  (stop ui-pather)
+
   "load a map"
   (def example-map (load-tiled-map "test-resources/test-map.json"))
   "tiles from tile layers"

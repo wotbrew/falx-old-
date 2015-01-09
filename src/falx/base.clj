@@ -1,6 +1,7 @@
 (ns falx.base
   (:require [silc.core :refer :all]
             [clj-tuple :refer [tuple]]
+            [clj-tiny-astar.path :refer [a*]]
             [falx
              [point :as pt]
              [rect :as rect]]
@@ -295,6 +296,17 @@
   (if (can-move? m e pt)
     (set-att m e :pos pt)
     m))
+
+(defn path
+  "Finds a path for the given entity to the
+   given point."
+  [game e to]
+  (let [pos (pos game e)
+        map (att game e :map)
+        bounds (map-size game map)
+        pred #(or (= pos %) (not (solid-at? game %)))]
+    (when (and pos map bounds)
+      (a* bounds pred pos to))))
 
 (defn can-attack?
   "Can the given entity `a` attack the other one `b`
@@ -642,7 +654,3 @@
   (if (mouse-in-game? m)
     (handle-primary-in-game m)
     (handle-primary-ui m)))
-
-(defprotocol ILifecycle
-  (start [this])
-  (stop [this]))
