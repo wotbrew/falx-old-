@@ -408,6 +408,11 @@
         target (creature-at-mouse m)]
     (attack m e target)))
 
+(defn move-cost
+  "Returns the cost (in ap) to move from one point to another"
+  [a b]
+  (int (Math/ceil (pt/precise-dist a b))))
+
 ;;commands
 (def cam-slow-speed
   500)
