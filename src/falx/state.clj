@@ -34,9 +34,6 @@
   "A map of default settings read in from resources/settings.edn"
   (read-string (slurp (io/resource "settings.edn"))))
 
-(def default-size
-  "Get the screen size by default"
-  [(:width settings) (:height settings)])
 
 (defonce
   ^{:doc  "The global camera"}
