@@ -232,6 +232,11 @@
 (def solid-at?
   (comp boolean first solid-at))
 
+(defn solid-at-mouse?
+  "Is the cell at the current mouse position solid?"
+  [m]
+  (solid-at? m (mouse m)))
+
 (defn goto
   "LOL - doesn't perform a goto.
    Rather adds the intention to goto the given point."
@@ -311,7 +316,8 @@
 (defn path-to-mouse
   "Finds a path for the given entity to the mouse position"
   [game e]
-  (path game e (mouse game)))
+  (when (not (solid-at-mouse? game))
+    (path game e (mouse game))))
 
 (defn can-attack?
   "Can the given entity `a` attack the other one `b`
