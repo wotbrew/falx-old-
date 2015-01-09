@@ -196,7 +196,7 @@
   [game]
   (when-let [ui-path (:ui-path game)]
     (let [[cw ch] (cell-size game)]
-      (doseq [[x y] ui-path]
+      (doseq [[x y] (rest ui-path)]
         (g/draw-point! :yellow-flag (* x cw) (- (* y ch)))))))
 
 (defn draw-world!
