@@ -319,6 +319,29 @@
   (when (not (solid-at-mouse? game))
     (path game e (mouse game))))
 
+(defn move-cost
+  "Returns the cost (in ap) to move from one point to another"
+  [a b]
+  (int (Math/ceil (pt/precise-dist a b))))
+
+(def default-ap
+  "The number of ap to use by default
+   if it hasn't already been defined for the entity"
+  10)
+
+(defn max-ap
+  "Returns the maximum ap (action points)
+   that the entity can hold"
+  [m e]
+  default-ap)
+
+(defn current-ap
+  "Returns the current ap (action points)
+   that the entity has."
+  [m e]
+  (or (first (att m e :ap))
+      (max-ap m e)))
+
 (defn can-attack?
   "Can the given entity `a` attack the other one `b`
    - is it possible?"
@@ -408,10 +431,6 @@
         target (creature-at-mouse m)]
     (attack m e target)))
 
-(defn move-cost
-  "Returns the cost (in ap) to move from one point to another"
-  [a b]
-  (int (Math/ceil (pt/precise-dist a b))))
 
 ;;commands
 (def cam-slow-speed
