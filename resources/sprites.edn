@@ -4,6 +4,9 @@
  :goblin-slave ["Goblins" [0 0 32 32]]
 
  :selected ["Misc" [0 0 32 32]]
+ :green-flag ["Misc" [0 64 32 32]]
+ :yellow-flag ["Misc" [32 64 32 32]]
+ :red-flag ["Misc" [64 64 32 32]]
 
  :blank ["Gui" [0 0 32 32]]
 

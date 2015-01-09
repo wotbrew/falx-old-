@@ -19,7 +19,7 @@
     (catch Throwable e
       (error "Error associating ui path" e))))
 
-(def ui-pather-tick 500)
+(def ui-pather-tick 150)
 
 (defrecord UiPather
   [kill]

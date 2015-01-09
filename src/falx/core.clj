@@ -192,6 +192,19 @@
           (let [y (- (* y (- ch)) -64 (max (:time world-text) 15))]
             (g/draw-text! (:text world-text) (* cw x) y)))))))
 
+(defn draw-ui-path!
+  [game]
+  (when-let [ui-path (:ui-path game)]
+    (let [[cw ch] (cell-size game)]
+      (doseq [[x y] ui-path]
+        (g/draw-point! :yellow-flag (* x cw) (- (* y ch)))))))
+
+(defn draw-world!
+  [game]
+  (draw-map! game)
+  (draw-ui-path! game)
+  (draw-world-texts! game))
+
 (defn mouse-sprite
   [game]
   (cond
@@ -287,8 +300,7 @@
           (sync-camera! game)
           (g/with-camera @cam
             (try
-              (draw-map! game)
-              (draw-world-texts! game)
+              (draw-world! game)
               (catch Throwable e
                 (.printStackTrace e))))
           (draw-ui! game))))))
