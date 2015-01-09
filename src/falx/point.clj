@@ -71,12 +71,14 @@
    (c+ (Math/abs ^int (c- x1 x0)) (Math/abs ^int (c- y1 y0)))))
 
 (defn precise-dist
-  [^double x0 ^double y0 ^double x1 ^double y1]
-  (let [dx (c- x1 x0)
-        dy (c- y1 y0)
-        dx (c* dx dx)
-        dy (c* dy dy)]
-    (Math/sqrt (c+ dx dy))))
+  ([[x y] [x2 y2]]
+    (precise-dist x y x2 y2))
+  ([^double x0 ^double y0 ^double x1 ^double y1]
+    (let [dx (c- x1 x0)
+          dy (c- y1 y0)
+          dx (c* dx dx)
+          dy (c* dy dy)]
+      (Math/sqrt (c+ dx dy)))))
 
 
 (defn adj?
