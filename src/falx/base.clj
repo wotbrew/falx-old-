@@ -308,6 +308,11 @@
     (when (and pos map bounds)
       (a* bounds pred pos to))))
 
+(defn path-to-mouse
+  "Finds a path for the given entity to the mouse position"
+  [game e]
+  (path game e (mouse game)))
+
 (defn can-attack?
   "Can the given entity `a` attack the other one `b`
    - is it possible?"
@@ -540,6 +545,7 @@
         [w h] (cell-size m)]
     (tuple (idiv x w)
            (idiv (- y h) (- h)))))
+
 
 (def default-screen [1024 768])
 

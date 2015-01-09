@@ -14,7 +14,7 @@
   []
   (try
     (if-let [entity (first (selected @game))]
-      (send state/game assoc :ui-path (path @game entity (mouse-cell @game)))
+      (send state/game assoc :ui-path (path-to-mouse @game entity))
       (send state/game dissoc :ui-path))
     (catch Throwable e
       (error "Error associating ui path" e))))
