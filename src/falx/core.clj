@@ -267,6 +267,17 @@
   (g/with-color color/black
     (g/draw-quad! @state/pixel x y w h)))
 
+(defn draw-box!
+  ([color x y w h]
+    (g/with-color color
+                  (draw-box! x y w h)))
+  ([x y w h]
+    (let [p @state/pixel]
+      (g/draw-quad! p x y 1 h)
+      (g/draw-quad! p (+ x w -1) y 1 h)
+      (g/draw-quad! p x y w 1)
+      (g/draw-quad! p x (+ y h -1) w 1))))
+
 (defn draw-buffers!
   [game]
   (let [[x y w h] (left-buffer game)]
@@ -277,18 +288,10 @@
     (draw-blanks! (- x 32) 0 32 h 32 32))
   (let [[x y w h] (bottom-buffer game)]
     (draw-black! x y w h)
-    (draw-blanks! 0 h w 32 32 32)))
+    (draw-blanks! 0 h w 32 32 32))
+  (let [[x y w h] (bottom-right-buffer game)]
+    (draw-blanks! (- x 32) y 32 h)))
 
-(defn draw-box!
-  ([color x y w h]
-   (g/with-color color
-     (draw-box! x y w h)))
-  ([x y w h]
-   (let [p @state/pixel]
-     (g/draw-quad! p x y 1 h)
-     (g/draw-quad! p (+ x w -1) y 1 h)
-     (g/draw-quad! p x y w 1)
-     (g/draw-quad! p x (+ y h -1) w 1))))
 
 (defn draw-player-backing!
   [game player x y w h]

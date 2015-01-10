@@ -691,6 +691,11 @@
   [game]
   (tuple (- (width game) (* 4 32)) 0 (* 4 32) (height game)))
 
+(defn bottom-right-buffer
+  "Returns the bottom right buffer rect relative to the current screen origin"
+  [game]
+  (tuple (- (width game) (* 4 32)) 0 (* 4 32) (* 6 32)))
+
 (defn player-buffer
   "Returns the buffer relevant to the screen origin
    for the given player (by n)"
