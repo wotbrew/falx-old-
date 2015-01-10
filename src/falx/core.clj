@@ -174,6 +174,35 @@
                         color/white)
           (draw-creature! game e x y))))))
 
+(defn flag-sprite
+  "Returns the flag sprite to use
+   for the given move cost (in ap) and current ap
+   of the entity"
+  [cost ap]
+  (cond
+    (>= 0 (- ap cost)) :red-flag
+    (>= 5 (- ap cost)) :yellow-flag
+    :else :green-flag))
+
+(defn draw-ui-path!
+  [game]
+  (when-let [ui-path (:ui-path game)]
+    (let [[cw ch] (cell-size game)
+          e (first (selected game))]
+      (loop [path (rest ui-path)
+             last-pos (pos game e)
+             last-cost 0]
+        (when last-pos
+          (let [[pt] path]
+            (when-let [[x y] pt]
+              (let [cost (move-cost last-pos pt)
+                    total-cost (int (+ last-cost cost))
+                    spr (flag-sprite total-cost (current-ap game e))]
+                (g/draw-point! spr (* x cw) (- (* y ch)))
+                (recur (rest path)
+                       pt
+                       total-cost)))))))))
+
 (defn draw-map!
   [game]
   (when (:map game)
@@ -181,6 +210,7 @@
       (draw-basic-layer! game (:map game) :base cw ch)
       (draw-basic-layer! game (:map game) :decor cw ch)
       (draw-basic-layer! game (:map game) :object cw ch)
+      (draw-ui-path! game)
       (draw-creature-layer! game (:map game) cw ch))))
 
 (defn draw-world-texts!
@@ -192,17 +222,10 @@
           (let [y (- (* y (- ch)) -64 (max (:time world-text) 15))]
             (g/draw-text! (:text world-text) (* cw x) y)))))))
 
-(defn draw-ui-path!
-  [game]
-  (when-let [ui-path (:ui-path game)]
-    (let [[cw ch] (cell-size game)]
-      (doseq [[x y] (rest ui-path)]
-        (g/draw-point! :yellow-flag (* x cw) (- (* y ch)))))))
 
 (defn draw-world!
   [game]
   (draw-map! game)
-  (draw-ui-path! game)
   (draw-world-texts! game))
 
 (defn mouse-sprite
@@ -273,7 +296,8 @@
     (draw-player-backing! game player x y w h)
     (when-let [spr (att game player :sprite)]
       (g/draw-text! (str "eid " player) (+ x 8) (+ y h -8))
-      (g/draw-quad! spr (+ x 32) (+ y h -96) 64 64))))
+      (g/draw-quad! spr (+ x 32) (+ y h -96) 64 64)
+      (g/draw-text! (str (current-ap game player) "AP") (+ x 8) (+ y h -128)))))
 
 (defn draw-players!
   [game]
