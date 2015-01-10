@@ -25,9 +25,14 @@
   [e next]
   (go (let [game @game
             dead? (dead? game e)]
-        (if dead?
+        (cond
+          dead?
           (do (debug e "is dead - cancelling move")
               (forget-goto! e))
+          (= 0 (current-ap game e))
+          (do (debug e "outta ap - cancelling move")
+              (forget-goto! e))
+          :else
           (do (send state/game move e next)
               (await state/game)
               (<! (timeout walk-tick)))))))
@@ -65,6 +70,7 @@
           goto (att game e :goto)]
       (cond
         (not goto) true
+        (= 0 (current-ap game e)) (forget-goto! e)
         (= goto (pos game e)) (bwalk-at-goal! e)
         (solid-at? game goto) (bwalk-goto-now-solid! goto e)
         :else (if-let [pa (path game e goto)]

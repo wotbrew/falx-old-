@@ -180,9 +180,9 @@
    of the entity"
   [cost ap]
   (cond
-    (>= 0 (- ap cost)) :red-flag
-    (>= 5 (- ap cost)) :yellow-flag
-    :else :green-flag))
+    (<= (+ cost 3) ap) :green-flag
+    (<= cost ap) :yellow-flag
+    :else :red-flag))
 
 (defn draw-ui-path!
   [game]

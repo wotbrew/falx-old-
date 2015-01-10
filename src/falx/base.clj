@@ -268,6 +268,54 @@
   [m map]
   [(att m map :width) (att m map :height)])
 
+(def default-ap
+  "The number of ap to use by default
+   if it hasn't already been defined for the entity"
+  10)
+
+(defn max-ap
+  "Returns the maximum ap (action points)
+   that the entity can hold"
+  [m e]
+  default-ap)
+
+(defn current-ap
+  "Returns the current ap (action points)
+   that the entity has."
+  [m e]
+  (or (att m e :ap)
+      (max-ap m e)))
+
+(defn clamp-ap
+  "Make sure the action points fit between 0 or (max ap of the entity)"
+  [m e ap]
+  (max 0 (min ap (max-ap m e))))
+
+(defn set-ap
+  "Sets the ap of the entity to the given value"
+  [m e ap]
+  (set-att m e :ap (clamp-ap m e ap)))
+
+(defn reclamp-ap
+  "Make sure our action points fit between 0 or (max)"
+  [m e]
+  (set-ap m e (current-ap m e)))
+
+(defn update-ap
+  "Applies the function to the entities current ap"
+  [m e f & args]
+  (set-ap m e (apply f (current-ap m e) args)))
+
+(defn refresh-ap
+  "'Refreshes' the entities action points
+   by setting the entities current ap back to the maximum ap"
+  [m e]
+  (set-ap m e (max-ap m e)))
+
+(defn refresh-players
+  [m]
+  (reduce refresh-ap m (players m)))
+
 (defn adjacent-to?
   "Is the entity adjacent to the given point?"
   [m e pt]
@@ -292,14 +340,21 @@
   "Can the entity move to the point
    - is it possible?"
   [m e pt]
-  (and (could-move? m e pt)))
+  (and (pos? (current-ap m e))
+       (could-move? m e pt)))
+
+(defn move-cost
+  "Returns the cost (in ap) to move from one point to another"
+  [a b]
+  (int (Math/ceil (pt/precise-dist a b))))
 
 (defn move
   "Attempt to move the entity from its current position
    to the one specified"
   [m e pt]
   (if (can-move? m e pt)
-    (set-att m e :pos pt)
+    (-> (set-att m e :pos pt)
+        (update-ap e - (move-cost (pos m e) pt)))
     m))
 
 (defn path
@@ -318,29 +373,6 @@
   [game e]
   (when (not (solid-at-mouse? game))
     (path game e (mouse game))))
-
-(defn move-cost
-  "Returns the cost (in ap) to move from one point to another"
-  [a b]
-  (int (Math/ceil (pt/precise-dist a b))))
-
-(def default-ap
-  "The number of ap to use by default
-   if it hasn't already been defined for the entity"
-  10)
-
-(defn max-ap
-  "Returns the maximum ap (action points)
-   that the entity can hold"
-  [m e]
-  default-ap)
-
-(defn current-ap
-  "Returns the current ap (action points)
-   that the entity has."
-  [m e]
-  (or (first (att m e :ap))
-      (max-ap m e)))
 
 (defn can-attack?
   "Can the given entity `a` attack the other one `b`
