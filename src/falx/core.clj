@@ -228,10 +228,18 @@
   (draw-map! game)
   (draw-world-texts! game))
 
+(defn mouse-attack-sprite
+  [game]
+  (let [target (attackable-at-mouse game)
+        e (fselected game)]
+    (if (can-attack? game e target)
+      :mouse-attack
+      :mouse-attack-grey)))
+
 (defn mouse-sprite
   [game]
   (cond
-    (attackable-at-mouse game) :mouse-attack
+    (attackable-at-mouse game) (mouse-attack-sprite game)
     (selectable-at-mouse game) :mouse-select
     :else :mouse))
 

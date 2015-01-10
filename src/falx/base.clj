@@ -160,6 +160,11 @@
   [m]
   (all m :selected?))
 
+(defn fselected
+  "Returns the first selected entity (or nil)"
+  [m]
+  (first (selected m)))
+
 (defn unselect
   "Unselects the entity"
   [m e]
@@ -374,9 +379,11 @@
   (when (not (solid-at-mouse? game))
     (path game e (mouse game))))
 
-(defn can-attack?
+(defn could-attack?
   "Can the given entity `a` attack the other one `b`
-   - is it possible?"
+   - is it possible?
+
+   Does not include an ap check"
   [m a b]
   (and
     (not= a b)
@@ -384,12 +391,19 @@
     (creature? m b)
     (adjacent? m a b)))
 
+(defn can-attack?
+  "Can the given entity `a` attack the other one `b`
+   - is it possible?"
+  [m a b]
+  (and (could-attack? m a b)
+       (<= 2 (current-ap m a))))
+
 (defn attackable?
   "Is the given entity attackable by the (first) selected entity"
   [m e]
   (and
     (enemy? m e)
-    (can-attack? m e (first (selected m)))))
+    (can-attack? m e (fselected m))))
 
 (def attackable-at-mouse
   "Get the attackable entity at the mouse position if possible or nil"
@@ -459,7 +473,7 @@
 (defn attack-at-mouse
   "Attacks the creature at the current mouse position"
   [m]
-  (let [e (first (selected m))
+  (let [e (fselected m)
         target (creature-at-mouse m)]
     (attack m e target)))
 
