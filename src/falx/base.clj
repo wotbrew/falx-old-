@@ -461,7 +461,8 @@
   [m e target]
   (-> (set-attack-offsets m e target)
       (create-attacked-text target)
-      (create-attack-bark e)))
+      (create-attack-bark e)
+      (update-ap e - 2)))
 
 (defn attack
   "Has `e` attack `target` if possible"
