@@ -336,17 +336,17 @@
     (not (solid-at? m pt))
     (adjacent-to? m e pt)))
 
-(defn can-move?
-  "Can the entity move to the point
-   - is it possible?"
-  [m e pt]
-  (and (pos? (current-ap m e))
-       (could-move? m e pt)))
-
 (defn move-cost
   "Returns the cost (in ap) to move from one point to another"
   [a b]
   (int (Math/ceil (pt/precise-dist a b))))
+
+(defn can-move?
+  "Can the entity move to the point
+   - is it possible?"
+  [m e pt]
+  (and (could-move? m e pt)
+       (<= (move-cost (pos m e) pt) (current-ap m e))))
 
 (defn move
   "Attempt to move the entity from its current position
