@@ -7,7 +7,8 @@
     [silc.core :refer :all]
     [clojure.tools.logging :refer [debug info]]
     [clojure.core.async :refer [go go-loop <! timeout] :as async]
-    [clojure.set :as set]))
+    [clojure.set :as set]
+    [falx.point :as pt]))
 
 ;;brain
 (def walk-tick 125)
@@ -67,11 +68,13 @@
   [e]
   (go
     (let [game @game
-          goto (att game e :goto)]
+          goto (att game e :goto)
+          p (pos game e)]
       (cond
         (not goto) true
         (= 0 (current-ap game e)) (forget-goto! e)
-        (= goto (pos game e)) (bwalk-at-goal! e)
+        (and (pt/adj? goto p) (< (current-ap game e) (move-cost goto p))) (forget-goto! e)
+        (= goto p) (bwalk-at-goal! e)
         (solid-at? game goto) (bwalk-goto-now-solid! goto e)
         :else (if-let [pa (path game e goto)]
                 (do

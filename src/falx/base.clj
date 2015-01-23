@@ -489,6 +489,11 @@
   [m]
   (players m))
 
+(defn next-turn
+  ""
+  [m]
+  (refresh-players m))
+
 ;;commands
 (def cam-slow-speed
   500)

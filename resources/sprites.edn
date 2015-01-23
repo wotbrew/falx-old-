@@ -10,6 +10,10 @@
 
  :blank ["Gui" [0 0 32 32]]
 
+ :turn ["Gui" [64 32 32 32]]
+ :combat ["Gui" [96 32 32 32]]
+ :peace ["Gui" [128 32 32 32]]
+
  :mouse ["Mouse" [0 0 32 32]]
  :mouse-select ["Mouse" [32 0 32 32]]
  :mouse-attack ["Mouse" [64 0 32 32]]

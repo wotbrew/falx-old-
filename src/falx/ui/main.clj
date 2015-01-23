@@ -8,7 +8,8 @@
             [gdx-2d.core :as g]
             [gdx-2d.color :as color]
             [clojure.core.memoize :as mem]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [falx.state :as state]))
 
 
 (defn game-buffer
@@ -45,6 +46,12 @@
   (let [[x y _ h] (if (< n 3) (left-buffer game) (right-buffer game))]
     (tuple x (+ y h -160 (* (mod n 3) -192)) 128 160)))
 
+(defn player-buffers
+  "Returns a seq of the player buffers"
+  [game]
+  (map #(player-buffer game %) (range 6)))
+
+
 (defn initiative-buffer
   "Returns the initiative buffer for the 'nth' entity"
   [game n]
@@ -56,29 +63,44 @@
   [game]
   (mouse-in? game (game-buffer game)))
 
+
+(defn player-n-having-mouse
+  "Returns the player (index) for that buffer which
+   has the mouses focus. Returns nil if the mouse is currently not in any
+   player buffer"
+  [game]
+  (loop [n 0]
+    (when (< n 6)
+      (let [buffer (player-buffer game n)]
+        (if (mouse-in? game buffer)
+          n
+          (recur (inc n)))))))
+
 ;;mouse clicks
 (defn handle-primary-player-buffers
   "Handles clicks in the player buffers area"
   [m]
-  (loop [m m
-         n 0]
-    (if (< n 6)
-      (let [buffer (player-buffer m n)]
-        (if (mouse-in? m buffer)
-          (perform-select m (player m n))
-          (recur m (inc n))))
-      m)))
+  (if-let [n (player-n-having-mouse m)]
+    (perform-select m (player m n))
+    m))
+
+(defn bottom-right-buffer-button-n
+  "Returns the nth bottom right button buffer"
+  [m n]
+  (let [[x y w] (bottom-right-buffer m)]
+    (tuple x (+ y 160 (* n -32)) w 32)))
+
+(defn end-turn-button-buffer
+  "Returns the end turn button buffer"
+  [m]
+  (bottom-right-buffer-button-n m 0))
 
 (defn handle-primary-bottom-right-buttons
+  "Handles clicks in the bottom right buffer area"
   [m]
-  (let [[x y w h :as buffer] (bottom-right-buffer m)]
-    (if (mouse-in? m buffer)
-      (cond
-        (mouse-in? m x (+ y 160) w h) (do
-                                        (println "end turn hit")
-                                        m)
-        :else m)
-      m)))
+  (cond
+    (mouse-in? m (end-turn-button-buffer m)) (next-turn m)
+    :else m))
 
 (defn handle-primary
   "Handles clicks in the ui area"
@@ -129,7 +151,6 @@
     (g/draw-text! (debug-str game) x sh)))
 
 
-
 (defn draw-buffers!
   [game]
   (let [[x y w h] (left-buffer game)]
@@ -144,15 +165,13 @@
   (let [[x y w h] (bottom-right-buffer game)]
     (draw-blanks! (- x 32) y 32 h)))
 
-
 (defn draw-turn-button!
-  [game x y w h]
-  (draw-button! game :turn "Next Turn" x y w 32))
+  [game [x y w h]]
+  (draw-button! game :turn "Next Turn" x y w h))
 
 (defn draw-bottom-right-buttons!
   [game]
-  (let [[x y w h] (bottom-right-buffer game)]
-    (draw-turn-button! game x (+ y 160) w h)))
+  (draw-turn-button! game (end-turn-button-buffer game)))
 
 (defn draw-player-backing!
   [game player x y w h]
