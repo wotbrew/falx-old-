@@ -128,6 +128,12 @@
   "Return the entities at the mouse position"
   (comp first (at-mouse-fn creature?)))
 
+(defn creature-name
+  "Returns the name of the creature"
+  [game e]
+  (or (att game e :name)
+      (str "eid " e)))
+
 (defn player?
   "Returns whether the given entity is a player"
   [m e]
@@ -478,6 +484,10 @@
         target (creature-at-mouse m)]
     (attack m e target)))
 
+(defn combatants
+  "Returns the current set of combatants ordered by initiative"
+  [m]
+  (players m))
 
 ;;commands
 (def cam-slow-speed
@@ -511,7 +521,6 @@
 (defmethod apply-command :cam-right
   [m _]
   (update m :cam (fnil pt/+ [0 0]) [(cam-shift m) 0]))
-
 
 (defn handle-primary-in-game
   [m]
@@ -669,76 +678,3 @@
   [m]
   [(width m) (height m)])
 
-(defn game-buffer
-  "Returns the game buffer rect relative to the current screen origin"
-  [game]
-  (tuple (* 5 32) (* 7 32)
-         (- (width game) (* 10 32))
-         (- (height game) (* 7 32))))
-
-(defn left-buffer
-  "Returns the left buffer rect relative to the current screen origin."
-  [game]
-  (tuple 0 0 (* 4 32) (height game)))
-
-(defn bottom-buffer
-  "Returns the bottom buffer rect relative to the current screen origin."
-  [game]
-  (tuple 0 0 (width game) (* 6 32)))
-
-(defn right-buffer
-  "Returns the right buffer rect relative to the current screen origin."
-  [game]
-  (tuple (- (width game) (* 4 32)) 0 (* 4 32) (height game)))
-
-(defn bottom-right-buffer
-  "Returns the bottom right buffer rect relative to the current screen origin"
-  [game]
-  (tuple (- (width game) (* 4 32)) 0 (* 4 32) (* 6 32)))
-
-(defn player-buffer
-  "Returns the buffer relevant to the screen origin
-   for the given player (by n)"
-  [game n]
-  (let [[x y _ h] (if (< n 3) (left-buffer game) (right-buffer game))]
-    (tuple x (+ y h -160 (* (mod n 3) -192)) 128 160)))
-
-(defn mouse-in?
-  "Is the mouse currently in the given rect"
-  ([game [x y w h]]
-    (mouse-in? game x y w h))
-  ([game x y w h]
-    (let [[mx my] (:mouse-screen game pt/id)
-          [_ sh] (screen game)
-          my (- sh my)]
-      (rect/pt-in? x y w h mx my))))
-
-(defn mouse-in-game?
-  "Is the mouse currently in the game buffer?"
-  [game]
-  (mouse-in? game (game-buffer game)))
-
-;;mouse clicks
-(defn handle-primary-player-buffers
-  "Handles clicks in the player buffers area"
-  [m]
-  (loop [m m
-         n 0]
-    (if (< n 6)
-      (let [buffer (player-buffer m n)]
-        (if (mouse-in? m buffer)
-          (perform-select m (player m n))
-          (recur m (inc n))))
-      m)))
-
-(defn handle-primary-ui
-  "Handles clicks in the ui area"
-  [m]
-  (-> m
-      handle-primary-player-buffers))
-
-(defmethod apply-command :primary
-  [m _]
-  (if (mouse-in-game? m)
-    (handle-primary-in-game m)
-    (handle-primary-ui m)))

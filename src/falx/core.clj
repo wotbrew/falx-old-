@@ -7,19 +7,28 @@
             [gdx-2d.color :as color]
             [silc.core :refer :all]
             [clojure.tools.logging :refer [info debug error]]
-            [clojure.core.memoize :as mem]
-            [clojure.string :as str]
             [clj-tuple :refer [tuple]]
             [falx
              [base :refer :all]
              [tiled :refer :all]
-             [state :refer :all :as state]
+             [state :refer :all]
              [lifecycle :refer :all]
              [input :as input]
              [point :as pt]]
             [falx.proc
              [ai :as ai]
-             [ui-pather :as ui-pather]]))
+             [ui-pather :as ui-pather]]
+            [falx.ui
+             [main :as ui-main]
+             [shared :refer :all]]))
+
+;;top level click handler
+
+(defmethod apply-command :primary
+  [m _]
+  (if (ui-main/mouse-in-game? m)
+    (handle-primary-in-game m)
+    (ui-main/handle-primary m)))
 
 
 ;;tiles
@@ -60,37 +69,7 @@
                     (apply-commands commands)
                     simulate))))
 
-;;debug
 
-(def pprint-str #(with-out-str (clojure.pprint/pprint %)))
-
-(def mem-pprint-str
-  "A memoized version of pprint that returns a string"
-  (mem/lru pprint-str :lru/threshold 10))
-
-(def mem-filter-keys
-  "A memoized version of filter keys"
-  (mem/lru filter-keys :lru/threshold 10))
-
-(defn debug-entity-attributes
-  "Returns a debug string for the given entities attributes"
-  [game e]
-  (str
-    "entity: " e
-    "\n"
-    (mem-pprint-str (mem-filter-keys (atts game e) keyword?))))
-
-(defn debug-str
-  "Returns a debug string for the given game state"
-  [game]
-  (str/join
-    "\n"
-    (concat [(select-keys game [:fps :screen :map])
-             (select-keys game [:mouse-screen :mouse-world :mouse-cell])
-             (str "commands: " (:commands game))
-             (str "in-game? " (mouse-in-game? game))
-             ""]
-            (map #(debug-entity-attributes game %) (at-mouse game)))))
 
 ;;rendering
 
@@ -116,12 +95,6 @@
   (let [[x y] (bottom-right game)]
     (g/draw-text! "x" (- x 10) (+ y 16))))
 
-(defn draw-debug!
-  "Draws some useful debug information to the screen"
-  [game]
-  (let [[x] (game-buffer game)
-        [_ sh] (screen game)]
-    (g/draw-text! (debug-str game) x sh)))
 
 (defn entities-in-layer
   "Return the set of entities in the map and layer"
@@ -228,6 +201,7 @@
   (draw-map! game)
   (draw-world-texts! game))
 
+
 (defn mouse-attack-sprite
   [game]
   (let [target (attackable-at-mouse game)
@@ -252,76 +226,13 @@
       (let [sprite (or (mouse-sprite game) :mouse)]
         (g/draw-point! sprite x (- h y cs))))))
 
-(defn draw-blanks!
-  ([x y w h]
-   (draw-blanks! x y w h 32 32))
-  ([x y w h cw ch]
-   (dotimes [xx (idiv w cw)]
-     (dotimes [yy (idiv h ch)]
-       (let [x (+ x (* xx cw))
-             y (+ y (* yy ch))]
-         (g/draw-point! :blank x y))))))
-
-(defn draw-black!
-  [x y w h]
-  (g/with-color color/black
-    (g/draw-quad! @state/pixel x y w h)))
-
-(defn draw-box!
-  ([color x y w h]
-    (g/with-color color
-                  (draw-box! x y w h)))
-  ([x y w h]
-    (let [p @state/pixel]
-      (g/draw-quad! p x y 1 h)
-      (g/draw-quad! p (+ x w -1) y 1 h)
-      (g/draw-quad! p x y w 1)
-      (g/draw-quad! p x (+ y h -1) w 1))))
-
-(defn draw-buffers!
-  [game]
-  (let [[x y w h] (left-buffer game)]
-    (draw-black! x y w h)
-    (draw-blanks! w 0 32 h 32 32))
-  (let [[x y w h] (right-buffer game)]
-    (draw-black! x y w h)
-    (draw-blanks! (- x 32) 0 32 h 32 32))
-  (let [[x y w h] (bottom-buffer game)]
-    (draw-black! x y w h)
-    (draw-blanks! 0 h w 32 32 32))
-  (let [[x y w h] (bottom-right-buffer game)]
-    (draw-blanks! (- x 32) y 32 h)))
 
 
-(defn draw-player-backing!
-  [game player x y w h]
-  (let [color (cond
-                (mouse-in? game x y w h) color/yellow
-                (selected? game player) color/green
-                :else color/white)]
-    (draw-box! color x y w h)))
-
-(defn draw-player!
-  [game player buffer]
-  (let [[x y w h] buffer]
-    (draw-player-backing! game player x y w h)
-    (when-let [spr (att game player :sprite)]
-      (g/draw-text! (str "eid " player) (+ x 8) (+ y h -8))
-      (g/draw-quad! spr (+ x 32) (+ y h -96) 64 64)
-      (g/draw-text! (str (current-ap game player) "AP") (+ x 8) (+ y h -128)))))
-
-(defn draw-players!
-  [game]
-  (dotimes [n 6]
-    (when-let [player (player game n)]
-      (draw-player! game player (player-buffer game n)))))
 
 (defn draw-ui!
   [game]
-  (draw-buffers! game)
-  (draw-players! game)
+  (ui-main/draw! game)
   (draw-screen-positions! game)
-  (draw-debug! game)
   (draw-mouse! game))
 
 (defn render!
@@ -390,4 +301,3 @@
   (send game (constantly default-game))
   "await the game"
   (await-for 1000 game))
-
