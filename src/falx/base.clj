@@ -463,7 +463,7 @@
   (add-world-text m (entity-world-text m e "haha!" color/white)))
 
 (defn just-attack
-  "Has `e` attack `target`"
+  "Have `e` attack `target`"
   [m e target]
   (-> (set-attack-offsets m e target)
       (create-attacked-text target)
@@ -471,7 +471,7 @@
       (update-ap e - 2)))
 
 (defn attack
-  "Has `e` attack `target` if possible"
+  "Have `e` attack `target` if possible"
   [m e target]
   (if (can-attack? m e target)
     (just-attack m e target)
@@ -489,10 +489,29 @@
   [m]
   (players m))
 
+(defn mode
+  "Returns the `mode` of the game.
+  i.e :player, :enemy or :real"
+  [m]
+  (:mode m :player))
+
+(def invert-mode
+  {:real :real
+   :player :enemy
+   :enemy :player})
+
+(defn flip-mode
+  [m]
+  (assoc m :mode (invert-mode (mode m))))
+
 (defn next-turn
   ""
   [m]
-  (refresh-players m))
+  (-> (case (mode m)
+        :player (refresh-players m)
+        m)
+      flip-mode))
+
 
 ;;commands
 (def cam-slow-speed

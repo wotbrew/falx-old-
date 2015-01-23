@@ -140,6 +140,7 @@
              (select-keys game [:mouse-screen :mouse-world :mouse-cell])
              (str "commands: " (:commands game))
              (str "in-game? " (mouse-in-game? game))
+             (str "mode: " (mode game))
              ""]
             (map #(debug-entity-attributes game %) (at-mouse game)))))
 
