@@ -4,7 +4,8 @@
             [falx.base :refer :all]
             [silc.core :refer :all]
             [falx.state :as state]
-            [falx.shapes :as shapes]))
+            [falx.shapes :as shapes]
+            [clojure.set :as set]))
 
 (def eye-tick 200)
 
@@ -14,9 +15,14 @@
   (go
     (let [game @state/game
           map (att game e :map)
-          points (visible-points game e)]
-      (when (player? game e)
-        (send state/game explore-points e points)))))
+          last-visible (att game e :visible)
+          points (visible-points game e)
+          now-hidden (set/difference last-visible points)
+          now-seen (set/difference points last-visible)]
+
+      (send state/game explore-points e now-seen)
+      (send state/game look-at-points e now-seen)
+      (send state/game unlook-at-points e now-hidden))))
 
 (defn eye-loop!
   [e]

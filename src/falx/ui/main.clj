@@ -128,13 +128,16 @@
   "A memoized version of filter keys"
   (mem/lru filter-keys :lru/threshold 10))
 
+(def do-not-show-keys #{:visible})
+
 (defn debug-entity-attributes
   "Returns a debug string for the given entities attributes"
   [game e]
   (str
     "entity: " e
     "\n"
-    (mem-pprint-str (mem-filter-keys (atts game e) keyword?))))
+    (mem-pprint-str (mem-filter-keys (atts game e) #(and (keyword? %)
+                                                         (not (do-not-show-keys %)))))))
 
 (defn debug-str
   "Returns a debug string for the given game state"

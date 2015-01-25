@@ -107,22 +107,30 @@
   [m map layer]
   (-> m :silc.core/ave (get entities-in-layer-key) (get (memmlyr map layer))))
 
-(defn should-draw-entity?
+(defn should-draw-static-entity?
   [m e]
   (and (pos m e)
        (explored-by-player? m e)
        (att m e :sprite)))
+
+(defn should-draw-mobile-entity?
+  [m e]
+  (and (should-draw-static-entity? m e)
+       (visible-by-player? m e)))
 
 (defn draw-basic-layer!
   "Draw a basic set of entities for the given map and layer
    this simply renders entities with a :sprite and :pos value"
   [game map* layer cw ch]
   (doseq [e (entities-in-layer game map* layer)
-          :when (should-draw-entity? game e)
-          :let [e (atts game e)]
-          :let [sprite (:sprite e)
-                [x y] (:pos e)]]
-    (g/draw-point! sprite (* x cw) (* y (- ch)))))
+          :when (should-draw-static-entity? game e)
+          :let [eatts (atts game e)]
+          :let [sprite (:sprite eatts)
+                [x y] (:pos eatts)]]
+    (g/with-color (if (visible-by-player? game e)
+                    color/white
+                    color/gray)
+      (g/draw-point! sprite (* x cw) (* y (- ch))))))
 
 (defn sync-camera!
   [game]
@@ -151,7 +159,7 @@
 (defn draw-creature-layer!
   [game map* cw ch]
   (doseq [e (entities-in-layer game map* :creature)
-          :when (should-draw-entity? game e)]
+          :when (should-draw-mobile-entity? game e)]
     (when-let [[x y] (pos game e)]
       (let [x (* x cw)
             y (* y (- ch))]
@@ -271,7 +279,7 @@
   "begin ze game"
   (loop! #'render!
          (assoc settings
-                :max-fps 0))
+                :max-fps 60))
   "Init ze game"
   (init!)
 

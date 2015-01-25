@@ -86,7 +86,7 @@
   (go
     (when (can-act? @state/game e)
       (<! (bwalk! e))
-      (when true #_(enemy? @state/game e)
+      (when (enemy? @state/game e)
         (<! (battack! e))
         (<! (bwalk-random! e))
 

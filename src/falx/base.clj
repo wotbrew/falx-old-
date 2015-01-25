@@ -291,6 +291,51 @@
 (def explored-by-player-at?
   (comp boolean first explored-by-player-at))
 
+(defn explore-points
+  [m e pts]
+  (let [map (att m e :map)]
+    (-> (fn [m pt]
+          (reduce (fn [m b]
+                    (if (explored-by? m b e)
+                      m
+                      (update-att m b :explored-by (fnil conj #{}) e))) m (at m map pt)))
+        (reduce m pts))))
+
+(defn visible-by?
+  [m e observer]
+  (contains? (att m e :visible-by) observer))
+
+(defn visible-by-player?
+  [m e]
+  (some #(visible-by? m e %) (players m)))
+
+(def visible-by-player-at
+  (at-fn visible-by-player?))
+
+(def visible-by-player-at?
+  (comp boolean first visible-by-player-at))
+
+(defn look-at-points
+  [m e pts]
+  (let [map (att m e :map)
+        m (set-att m e :visible pts)]
+    (-> (fn [m pt]
+          (reduce (fn [m b]
+                    (if (visible-by? m b e)
+                      m
+                      (update-att m b :visible-by (fnil conj #{}) e))) m (at m map pt)))
+        (reduce m pts))))
+
+(defn unlook-at-points
+  [m e pts]
+  (let [map (att m e :map)]
+    (-> (fn [m pt]
+          (reduce (fn [m b]
+                    (if (visible-by? m b e)
+                      (update-att m b :visible-by disj e)
+                      m)) m (at m map pt)))
+        (reduce m pts))))
+
 (defn los*
   [m map apt bpt]
   (take-while #(not (opaque-at? m map %)) (shapes/line apt bpt)))
@@ -330,15 +375,6 @@
         circle (shapes/filled-circle x y 5)]
     (into #{} (filter #(los-to? m e %) circle))))
 
-(defn explore-points
-  [m e pts]
-  (let [map (att m e :map)]
-    (-> (fn [m pt]
-          (reduce (fn [m b]
-                    (if (explored-by? m b e)
-                      m
-                      (update-att m b :explored-by (fnil conj #{}) e))) m (at m map pt)))
-        (reduce m pts))))
 
 (defn goto
   "LOL - doesn't perform a goto.
