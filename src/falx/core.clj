@@ -97,21 +97,32 @@
   (let [[x y] (bottom-right game)]
     (g/draw-text! "x" (- x 10) (+ y 16))))
 
+(def entities-in-layer-key
+  #{:map :layer})
+
+(def memmlyr (mem2 (fn [m l] {:map m :layer l})))
 
 (defn entities-in-layer
   "Return the set of entities in the map and layer"
   [m map layer]
-  (with-many m {:map map :layer layer}))
+  (-> m :silc.core/ave (get entities-in-layer-key) (get (memmlyr map layer))))
+
+(defn should-draw-entity?
+  [m e]
+  (and (pos m e)
+       (explored-by-player? m e)
+       (att m e :sprite)))
 
 (defn draw-basic-layer!
   "Draw a basic set of entities for the given map and layer
    this simply renders entities with a :sprite and :pos value"
   [game map* layer cw ch]
   (doseq [e (entities-in-layer game map* layer)
-          :let [e (atts game e)]]
-    (when-let [sprite (:sprite e)]
-      (when-let [[x y] (:pos e)]
-        (g/draw-point! sprite (* x cw) (* y (- ch)))))))
+          :when (should-draw-entity? game e)
+          :let [e (atts game e)]
+          :let [sprite (:sprite e)
+                [x y] (:pos e)]]
+    (g/draw-point! sprite (* x cw) (* y (- ch)))))
 
 (defn sync-camera!
   [game]
@@ -139,8 +150,9 @@
 
 (defn draw-creature-layer!
   [game map* cw ch]
-  (doseq [e (entities-in-layer game map* :creature)]
-    (when-let [[x y] (att game e :pos)]
+  (doseq [e (entities-in-layer game map* :creature)
+          :when (should-draw-entity? game e)]
+    (when-let [[x y] (pos game e)]
       (let [x (* x cw)
             y (* y (- ch))]
         (draw-creature-circle! game e x y)
@@ -170,13 +182,14 @@
         (when last-pos
           (let [[pt] path]
             (when-let [[x y] pt]
-              (let [cost (move-cost last-pos pt)
-                    total-cost (int (+ last-cost cost))
-                    spr (flag-sprite total-cost (current-ap game e))]
-                (g/draw-point! spr (* x cw) (- (* y ch)))
-                (recur (rest path)
-                       pt
-                       total-cost)))))))))
+              (when (explored-by-player-at? game pt)
+                (let [cost (move-cost last-pos pt)
+                      total-cost (int (+ last-cost cost))
+                      spr (flag-sprite total-cost (current-ap game e))]
+                  (g/draw-point! spr (* x cw) (- (* y ch)))
+                  (recur (rest path)
+                         pt
+                         total-cost))))))))))
 
 (defn draw-map!
   [game]
@@ -258,7 +271,7 @@
   "begin ze game"
   (loop! #'render!
          (assoc settings
-                :max-fps 60))
+                :max-fps 0))
   "Init ze game"
   (init!)
 
@@ -310,6 +323,6 @@
   "reset the game to its default"
   (do (restart-agent game default-game)
       nil)
-  (send game (constantly default-game))
+  (silent-send! game (constantly default-game))
   "await the game"
   (await-for 1000 game))

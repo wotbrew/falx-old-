@@ -4,7 +4,8 @@
             [clj-tiny-astar.path :refer [a*]]
             [falx
              [point :as pt]
-             [rect :as rect]]
+             [rect :as rect]
+             [shapes :as shapes]]
             [gdx-2d.color :as color]))
 
 (defn ind
@@ -35,87 +36,6 @@
   [a b]
   (int (/ a b)))
 
-(defn line*
-  [x1 y1 x2 y2 dx dy sx sy err]
-  (lazy-seq
-    (if (and (= x1 x2)
-             (= y1 y2))
-      (cons (tuple x2 y2) nil)
-      (cons (tuple x1 y1)
-            (let [e2 (* 2 err)
-                  err (if (> e2 (- dy))
-                        (- err dy)
-                        err)
-                  err (if (< e2 dx)
-                        (+ err dx)
-                        err)
-                  x1 (if (> e2 (- dy))
-                       (+ x1 sx)
-                       x1)
-                  y1 (if (< e2 dx)
-                       (+ y1 sy)
-                       y1)]
-              (line*
-                x1 y1 x2 y2 dx dy sx sy err))))))
-
-(defn line
-  ([[x1 y1] [x2 y2]]
-    (line x1 y1 x2 y2))
-  ([x1 y1 x2 y2]
-    (let [dx (Math/abs ^int (- x2 x1))
-          dy (Math/abs ^int (- y2 y1))
-          sx (if (< x1 x2) 1 -1)
-          sy (if (< y1 y2) 1 -1)
-          err (- dx dy)]
-      (line* x1 y1 x2 y2 dx dy sx sy err))))
-
-(defn circle
-  [^double x ^double y ^double radius]
-  (loop [res (list
-               (tuple x (+ y radius))
-               (tuple x (- y radius))
-               (tuple (+ x radius) y)
-               (tuple (- x radius) y))
-         f (- 1 radius)
-         ddf-x 1
-         ddf-y (* -2 radius)
-         xx 0
-         yy radius]
-    (if (< xx yy)
-      (let [yy (if (>= f 0) (dec yy) yy)
-            ddf-y (if (>= f 0) (+ ddf-y 2) ddf-y)
-            f (if (>= f 0) (+ f ddf-y) f)
-            xx (inc xx)
-            ddf-x (+ ddf-x 2)
-            f (+ f ddf-x)]
-        (recur
-          (conj res
-                (tuple (+ x xx) (+ y yy))
-                (tuple (- x xx) (+ y yy))
-                (tuple (+ x xx) (- y yy))
-                (tuple (- x xx) (- y yy))
-
-                (tuple (+ x yy) (+ y xx))
-                (tuple (- x yy) (+ y xx))
-                (tuple (+ x yy) (- y xx))
-                (tuple (- x yy) (- y xx)))
-          f
-          ddf-x
-          ddf-y
-          xx
-          yy))
-      (set res))))
-
-(defn filled-circle
-  [x y radius]
-  (for [xx (range (- x radius) (+ x radius 1))
-        yy (range (- y radius) (+ y radius 1))
-        :when (<= (pt/manhattan-dist x y xx yy) radius)]
-    (tuple xx yy)))
-
-(defn square
-  [x y width]
-  (rect/pts (- x (int (/ width 2))) (- y (int (/ width 2))) width width))
 
 ;;move to silc
 (defn update-att
@@ -153,12 +73,23 @@
   [m e]
   (att m e :pos))
 
+(defn mem2
+  [f]
+  (let [atom (atom {})]
+    (fn [a b]
+      (or (-> @atom (get a) (get b))
+          (let [r (f a b)]
+            (swap! atom assoc-in [a b] r)
+            r)))))
+
+(def mepmp (mem2 (fn [map pos] {:map map :pos pos})))
+(def at-ave-key #{:map :pos})
 (defn at
   "Find the entities at the given point (and map)"
   ([game pt]
     (at game (:map game) pt))
   ([game map pt]
-    (with-many game {:map map :pos pt})))
+    (-> game :silc.core/ave (get at-ave-key) (get (mepmp map pt)))))
 
 (defn at-mouse
   "Find the entities at the mouse position"
@@ -333,6 +264,81 @@
   "Is the cell at the current mouse position solid?"
   [m]
   (solid-at? m (mouse m)))
+
+(defn opaque?
+  "Is the entity opaque?"
+  [m e]
+  (or (att m e :opaque?)
+      (= :wall (att m e :terrain))))
+
+(def opaque-at
+  (at-fn opaque?))
+
+(def opaque-at?
+  (comp boolean first opaque-at))
+
+(defn explored-by?
+  [m e observer]
+  (contains? (att m e :explored-by) observer))
+
+(defn explored-by-player?
+  [m e]
+  (some #(explored-by? m e %) (players m)))
+
+(def explored-by-player-at
+  (at-fn explored-by-player?))
+
+(def explored-by-player-at?
+  (comp boolean first explored-by-player-at))
+
+(defn los*
+  [m map apt bpt]
+  (take-while #(not (opaque-at? m map %)) (shapes/line apt bpt)))
+
+
+(defn- los*?
+  [m bmap bpt los]
+  (if (not (opaque-at? m bmap bpt))
+    (= (last los) bpt)
+    (when-let [l (last los)]
+      (pt/adj? l bpt))))
+
+(defn los-to
+  [m a bpt]
+  (let [apt (pos m a)]
+    (when apt
+      (los* m (att m a :map) apt bpt))))
+
+(defn los-to?
+  [m a bpt]
+  (let [apt (pos m a)]
+    (when (and apt bpt)
+      (los*? m (att m a :map) bpt (los-to m a bpt)))))
+
+(defn los?
+  [m a b]
+  (let [amap (att m a :map)
+        bmap (att m b :map)
+        bpt (pos m b)]
+    (when (and bpt (= amap bmap))
+      (los-to? m a bpt))))
+
+(defn visible-points
+  "Returns the visible points for an entity"
+  [m e]
+  (let [[x y] (pos m e)
+        circle (shapes/filled-circle x y 5)]
+    (into #{} (filter #(los-to? m e %) circle))))
+
+(defn explore-points
+  [m e pts]
+  (let [map (att m e :map)]
+    (-> (fn [m pt]
+          (reduce (fn [m b]
+                    (if (explored-by? m b e)
+                      m
+                      (update-att m b :explored-by (fnil conj #{}) e))) m (at m map pt)))
+        (reduce m pts))))
 
 (defn goto
   "LOL - doesn't perform a goto.

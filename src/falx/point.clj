@@ -1,6 +1,7 @@
 (ns falx.point
   (:require [clj-tuple :refer [tuple]])
-  (:refer-clojure :exclude [+ - *]))
+  (:refer-clojure :exclude [+ - *])
+  (:import (java.util Deque Set HashSet LinkedList)))
 
 (def id (tuple 0 0))
 
@@ -141,3 +142,27 @@
 (defn cardinal-adj
   ([pt]
     (map #(+ % pt) cardinal-dirs)))
+
+;;todo efficient functional algorithm here?
+(defn- flood*
+  [^Deque q ^Set hs pred]
+  (lazy-seq
+    (when (< 0 (.size q))
+      (let [n (.poll q)]
+        (if (pred n)
+          (do
+            (doseq [a (cardinal-adj n)
+                    :when (.add hs a)]
+              (.addFirst q a))
+            (cons n (flood* q hs pred)))
+          (flood* q hs pred))))))
+
+(defn flood
+  [p pred]
+  (let [hs (HashSet.)
+        q (LinkedList.)]
+    (.add hs p)
+    (.add q p)
+    (flood* q hs pred)))
+
+

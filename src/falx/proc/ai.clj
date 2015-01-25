@@ -4,6 +4,8 @@
      [state :as state :refer :all]
      [base :refer :all]
      [lifecycle :refer :all]]
+    [falx.proc
+     [eyes :as eyes]]
     [silc.core :refer :all]
     [clojure.tools.logging :refer [debug info]]
     [clojure.core.async :refer [go go-loop <! timeout] :as async]
@@ -117,8 +119,9 @@
             (commute conscious into new)
             new))]
     (doseq [e new]
-      (debug e "now has a brain")
-      (brain-loop! e))))
+      (debug e "now has a brain & eye loop")
+      (brain-loop! e)
+      (eyes/eye-loop! e))))
 
 (defrecord BrainSpawner
   [kill]
