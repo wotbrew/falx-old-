@@ -11,84 +11,74 @@
     [falx.point :as pt]))
 
 ;;brain
-(def walk-tick 125)
 (def brain-tick 100)
 (def brain-spawner-tick 500)
-
-
-(declare bwalk!)
 
 (defn forget-goto!
   [e]
   (send state/game forget-goto e))
 
-(defn attempt-move!
-  [e next]
-  (go (let [game @game
-            dead? (dead? game e)]
-        (cond
-          dead?
-          (do (debug e "is dead - cancelling move")
-              (forget-goto! e))
-          (= 0 (current-ap game e))
-          (do (debug e "outta ap - cancelling move")
-              (forget-goto! e))
-          :else
-          (do (send state/game move e next)
-              (await state/game)
-              (<! (timeout walk-tick)))))))
-
-(defn attempt-walk!
-  [e path]
-  (let [target (last path)]
-    (go-loop
-      [[p & rest] path]
-      (cond
-        (not p) (debug e "is done walking")
-        (not= target (att @game e :goto)) (debug e "goto target changed - repathing")
-        :else (do
-                (debug e "moving to" p)
-                (<! (attempt-move! e p))
-                (if (not= (pos @game e) p)
-                  (debug e "could not move due to unforseen obstacle - repathing")
-                  (recur rest)))))))
-
-(defn bwalk-at-goal!
+(defn bstep!
   [e]
-  (debug e "is at its goal")
-  (send state/game forget-goto e)
-  (await state/game))
+  (send state/game step-current-path e))
 
-(defn bwalk-goto-now-solid!
-  [goto e]
-  (debug e "can no longer move to" goto "- it is solid")
-  (forget-goto! e))
+(defn bpath!
+  [e goto]
+  (let [game @game
+        path (path game e goto)]
+    (when (not-empty path)
+      (send state/game set-path e path))))
 
 (defn bwalk!
   [e]
-  (go
-    (let [game @game
-          goto (att game e :goto)
-          p (pos game e)]
+  (let [game @game]
+    (when-let [goto (att game e :goto)]
       (cond
-        (not goto) true
-        (= 0 (current-ap game e)) (forget-goto! e)
-        (and (pt/adj? goto p) (< (current-ap game e) (move-cost goto p))) (forget-goto! e)
-        (= goto p) (bwalk-at-goal! e)
-        (solid-at? game goto) (bwalk-goto-now-solid! goto e)
-        :else (if-let [pa (path game e goto)]
-                (do
-                  (debug e "path to" goto "is" pa)
-                  (<! (attempt-walk! e pa)))
-                (forget-goto! e))))))
+        (should-cancel-all-movement? game e) (forget-goto! e)
+        (current-path-valid? game e) (bstep! e)
+        (goto-valid? game e) (bpath! e goto)
+        :else (forget-goto! e)))))
 
+(defn pick-random-adjacent-point
+  [game e]
+  (when-let [pos (pos game e)]
+    (rand-nth (pt/adj pos))))
+
+(defn bwalk-random!
+  [e]
+  (let [game @game]
+    (when (not (att game e :goto))
+      (let [n (pick-random-adjacent-point game e)]
+        (when (can-move? game e n)
+          (send state/game goto e n))))))
 
 
 (defn do-brain!
   "Performed on each brain tick"
   [e]
   (go
-    (<! (bwalk! e))))
+    (when (can-act? @state/game e)
+      (bwalk! e)
+      (when (enemy? @state/game e)
+        (bwalk-random! e)))))
+
+(defn brain-loop!
+  [e]
+  (go-loop
+    []
+    (let [game @game
+          dead? (or (dead? game e) (not (creature? game e)))]
+      (when dead?
+        (debug e "is dead - removing brain")
+        (dosync (commute conscious disj e)))
+      (when-not dead?
+        (try
+          (<! (do-brain! e))
+          (catch Throwable e
+            (.printStackTrace e)
+            (<! (timeout 1000))))
+        (<! (timeout brain-tick))
+        (recur)))))
 
 (defn do-brain-spawning!
   []
@@ -100,21 +90,7 @@
             new))]
     (doseq [e new]
       (debug e "now has a brain")
-      (go-loop
-        []
-        (let [game @game
-              dead? (or (dead? game e) (not (creature? game e)))]
-          (when dead?
-            (debug e "is dead - removing brain")
-            (dosync (commute conscious disj e)))
-          (when-not dead?
-            (try
-              (<! (do-brain! e))
-              (catch Throwable e
-                (.printStackTrace e)
-                (<! (timeout 1000))))
-            (<! (timeout brain-tick))
-            (recur)))))))
+      (brain-loop! e))))
 
 (defrecord BrainSpawner
   [kill]

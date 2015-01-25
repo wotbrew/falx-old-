@@ -17,7 +17,8 @@
              [point :as pt]]
             [falx.proc
              [ai :as ai]
-             [ui-pather :as ui-pather]]
+             [ui-pather :as ui-pather]
+             [turn-ender :as turn-ender]]
             [falx.ui
              [main :as ui-main]
              [shared :refer :all]]))
@@ -64,7 +65,8 @@
                            :screen screen
                            :mouse-screen mouse
                            :mouse-world world-mouse
-                           :delta delta)
+                           :delta delta
+                           :elapsed (+ delta (:elapsed % 0)))
                     (assoc-with :mouse-cell mouse-cell)
                     (apply-commands commands)
                     simulate))))
@@ -162,7 +164,7 @@
   (when-let [ui-path (:ui-path game)]
     (let [[cw ch] (cell-size game)
           e (first (selected game))]
-      (loop [path (rest ui-path)
+      (loop [path ui-path
              last-pos (pos game e)
              last-cost 0]
         (when last-pos
@@ -227,8 +229,6 @@
         (g/draw-point! sprite x (- h y cs))))))
 
 
-
-
 (defn draw-ui!
   [game]
   (ui-main/draw! game)
@@ -269,6 +269,10 @@
   (def ui-pather (ui-pather/ui-pather))
   (start ui-pather)
   (stop ui-pather)
+
+  (def turn-ender (turn-ender/turn-ender))
+  (start turn-ender)
+  (stop turn-ender)
 
   "load a map"
   (def example-map (load-tiled-map "test-resources/test-map.json"))

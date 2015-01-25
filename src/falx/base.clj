@@ -35,6 +35,88 @@
   [a b]
   (int (/ a b)))
 
+(defn line*
+  [x1 y1 x2 y2 dx dy sx sy err]
+  (lazy-seq
+    (if (and (= x1 x2)
+             (= y1 y2))
+      (cons (tuple x2 y2) nil)
+      (cons (tuple x1 y1)
+            (let [e2 (* 2 err)
+                  err (if (> e2 (- dy))
+                        (- err dy)
+                        err)
+                  err (if (< e2 dx)
+                        (+ err dx)
+                        err)
+                  x1 (if (> e2 (- dy))
+                       (+ x1 sx)
+                       x1)
+                  y1 (if (< e2 dx)
+                       (+ y1 sy)
+                       y1)]
+              (line*
+                x1 y1 x2 y2 dx dy sx sy err))))))
+
+(defn line
+  ([[x1 y1] [x2 y2]]
+    (line x1 y1 x2 y2))
+  ([x1 y1 x2 y2]
+    (let [dx (Math/abs ^int (- x2 x1))
+          dy (Math/abs ^int (- y2 y1))
+          sx (if (< x1 x2) 1 -1)
+          sy (if (< y1 y2) 1 -1)
+          err (- dx dy)]
+      (line* x1 y1 x2 y2 dx dy sx sy err))))
+
+(defn circle
+  [^double x ^double y ^double radius]
+  (loop [res (list
+               (tuple x (+ y radius))
+               (tuple x (- y radius))
+               (tuple (+ x radius) y)
+               (tuple (- x radius) y))
+         f (- 1 radius)
+         ddf-x 1
+         ddf-y (* -2 radius)
+         xx 0
+         yy radius]
+    (if (< xx yy)
+      (let [yy (if (>= f 0) (dec yy) yy)
+            ddf-y (if (>= f 0) (+ ddf-y 2) ddf-y)
+            f (if (>= f 0) (+ f ddf-y) f)
+            xx (inc xx)
+            ddf-x (+ ddf-x 2)
+            f (+ f ddf-x)]
+        (recur
+          (conj res
+                (tuple (+ x xx) (+ y yy))
+                (tuple (- x xx) (+ y yy))
+                (tuple (+ x xx) (- y yy))
+                (tuple (- x xx) (- y yy))
+
+                (tuple (+ x yy) (+ y xx))
+                (tuple (- x yy) (+ y xx))
+                (tuple (+ x yy) (- y xx))
+                (tuple (- x yy) (- y xx)))
+          f
+          ddf-x
+          ddf-y
+          xx
+          yy))
+      (set res))))
+
+(defn filled-circle
+  [x y radius]
+  (for [xx (range (- x radius) (+ x radius 1))
+        yy (range (- y radius) (+ y radius 1))
+        :when (<= (pt/manhattan-dist x y xx yy) radius)]
+    (tuple xx yy)))
+
+(defn square
+  [x y width]
+  (rect/pts (- x (int (/ width 2))) (- y (int (/ width 2))) width width))
+
 ;;move to silc
 (defn update-att
   "Applies the function f (plus any args)
@@ -274,6 +356,18 @@
   [m e]
   (att m e :dead?))
 
+(defn mode
+  "Returns the `mode` of the game.
+  i.e :player, :enemy or :real"
+  [m]
+  (:mode m :player))
+
+(defn mode=
+  "Is the current game mode equal to 'mde'
+   e.g :player, :enemy or :real"
+  [m mde]
+  (= (mode m) mde))
+
 (defn map-size
   "Returns the size of the given map as a tuple"
   [m map]
@@ -296,6 +390,11 @@
   [m e]
   (or (att m e :ap)
       (max-ap m e)))
+
+(defn any-ap?
+  "Does the entity have an ap at all?"
+  [m e]
+  (pos? (current-ap m e)))
 
 (defn clamp-ap
   "Make sure the action points fit between 0 or (max ap of the entity)"
@@ -339,6 +438,16 @@
   (when-let [pos (pos m b)]
     (adjacent-to? m a pos)))
 
+(defn can-act?
+  "Can the entity act at all?"
+  [m e]
+  (and
+    (cond
+      (player? m e) (mode= m :player)
+      (enemy? m e) (mode= m :enemy)
+      :else true)
+    (pos? (current-ap m e))))
+
 (defn could-move?
   "Could the entity move to the point
    if not for itself due to lack of stamina/ap etc"
@@ -357,6 +466,7 @@
    - is it possible?"
   [m e pt]
   (and (could-move? m e pt)
+       (can-act? m e)
        (<= (move-cost (pos m e) pt) (current-ap m e))))
 
 (defn move
@@ -368,6 +478,19 @@
         (update-ap e - (move-cost (pos m e) pt)))
     m))
 
+(defn should-cancel-all-movement?
+  "Should the entity cancel even trying to move"
+  [game e]
+  (or (dead? game e)
+      (not (any-ap? game e))))
+
+(defn should-cancel-move-to-pt?
+  "Should cancel attempting to move to the given point
+   for example because it cannot make up the ap cost"
+  [game e pt]
+  (or (should-cancel-all-movement? game e)
+      (< (current-ap game e) (move-cost (pos game e) pt))))
+
 (defn path
   "Finds a path for the given entity to the
    given point."
@@ -377,13 +500,71 @@
         bounds (map-size game map)
         pred #(or (= pos %) (not (solid-at? game %)))]
     (when (and pos map bounds)
-      (a* bounds pred pos to))))
+      (rest (a* bounds pred pos to)))))
 
 (defn path-to-mouse
   "Finds a path for the given entity to the mouse position"
   [game e]
   (when (not (solid-at-mouse? game))
     (path game e (mouse game))))
+
+(defn current-path
+  "Returns the current path of the entity"
+  [game e]
+  (att game e :path []))
+
+(defn next-in-current-path
+  "Returns the next pt in the current path"
+  [game e]
+  (first (current-path game e)))
+
+(defn set-path
+  "Sets the entities path to the given value"
+  [game e path]
+  (set-att game e :path path))
+
+(defn pathing-to-goto?
+  "Is the entity currently pathing to its goto?"
+  [game e]
+  (when-let [goto (att game e :goto)]
+    (= goto (last (current-path game e)))))
+
+(defn goto-invalid?
+  "Is the entities goto position now invalid?"
+  [game e]
+  (let [goto (att game e :goto)]
+    (cond
+      (solid-at? game goto) :now-solid
+      :else nil)))
+
+(defn goto-valid?
+  "Is the entities goto position valid?"
+  [game e]
+  (not (goto-invalid? game e)))
+
+(defn could-move-to-next-in-current-path?
+  "Could the entity move to the next point in
+   its current path, forgiving lack of AP."
+  [game e]
+  (when-let [pt (next-in-current-path game e)]
+    (could-move? game e pt)))
+
+(defn current-path-valid?
+  "Is the current path valid"
+  [game e]
+  (and (goto-valid? game e)
+       (could-move-to-next-in-current-path? game e)
+       (pathing-to-goto? game e)))
+
+(defn step-current-path
+  "Attempt to make a single step along the current path"
+  [game e]
+  (if-let [pt (next-in-current-path game e)]
+    (if (can-move? game e pt)
+      (-> (move game e pt)
+          (update-att e :path rest))
+      game)
+    game))
 
 (defn could-attack?
   "Can the given entity `a` attack the other one `b`
@@ -402,17 +583,20 @@
    - is it possible?"
   [m a b]
   (and (could-attack? m a b)
+       (can-act? m a)
        (<= 2 (current-ap m a))))
 
 (defn attackable?
-  "Is the given entity attackable by the (first) selected entity"
+  "Is the given entity attackable by the (first) selected entity
+   n.b - ignores ap costs"
   [m e]
   (and
     (enemy? m e)
-    (can-attack? m e (fselected m))))
+    (could-attack? m (fselected m) e)))
 
 (def attackable-at-mouse
-  "Get the attackable entity at the mouse position if possible or nil"
+  "Get the attackable entity at the mouse position if possible or nil
+   - ignores ap costs"
   (comp first (at-mouse-fn attackable?)))
 
 (defn attack-offset
@@ -484,16 +668,6 @@
         target (creature-at-mouse m)]
     (attack m e target)))
 
-(defn combatants
-  "Returns the current set of combatants ordered by initiative"
-  [m]
-  (players m))
-
-(defn mode
-  "Returns the `mode` of the game.
-  i.e :player, :enemy or :real"
-  [m]
-  (:mode m :player))
 
 (def invert-mode
   {:real :real

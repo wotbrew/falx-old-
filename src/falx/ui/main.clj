@@ -95,11 +95,16 @@
   [m]
   (bottom-right-buffer-button-n m 0))
 
+(defn enemy-turn-buffer
+  "Returns the buffer used to display the enemies turn in flight"
+  [m]
+  (bottom-right-buffer-button-n m 0))
+
 (defn handle-primary-bottom-right-buttons
   "Handles clicks in the bottom right buffer area"
   [m]
   (cond
-    (mouse-in? m (end-turn-button-buffer m)) (next-turn m)
+    (and (mode= m :player) (mouse-in? m (end-turn-button-buffer m))) (next-turn m)
     :else m))
 
 (defn handle-primary
@@ -170,9 +175,19 @@
   [game [x y w h]]
   (draw-button! game :turn "Next Turn" x y w h))
 
+(defn draw-enemy-turn!
+  [m [x y w h]]
+  (draw-box! color/gray x y w h)
+  (g/draw-quad! :turn x y 32 32)
+  (g/with-font-color color/red
+    (g/draw-text! "Enemy Turn" (+ x 32) (+ y 23))))
+
 (defn draw-bottom-right-buttons!
   [game]
-  (draw-turn-button! game (end-turn-button-buffer game)))
+  (when (mode= game :player)
+    (draw-turn-button! game (end-turn-button-buffer game)))
+  (when (mode= game :enemy)
+    (draw-enemy-turn! game (enemy-turn-buffer game))))
 
 (defn draw-player-backing!
   [game player x y w h]
@@ -198,29 +213,9 @@
       (draw-player! game player (player-buffer game n)))))
 
 
-(defn draw-initiative!
-  [game e x y w h]
-  (draw-filled-box! x y w h)
-  (g/draw-quad! (att game e :sprite :blank) x y w h)
-  (g/draw-text! "0" x (+ y h))
-  (when (mouse-in? game x y w h)
-    (draw-hover-text! (creature-name game e) x (+ y h))))
-
-(defn draw-combat-order!
-  [game]
-  (let [cr (combatants game)]
-    (loop [cr cr
-           i 0]
-      (let [e (first cr)
-            [x y w h] (initiative-buffer game i)]
-        (when e
-          (draw-initiative! game e x y w h)
-          (recur (rest cr) (inc i)))))))
-
 (defn draw!
   [game]
   (draw-buffers! game)
   (draw-bottom-right-buttons! game)
   (draw-players! game)
-  (draw-combat-order! game)
   (draw-debug! game))

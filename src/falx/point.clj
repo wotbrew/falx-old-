@@ -113,3 +113,31 @@
   (tuple (int x) (int y)))
 
 
+(def dir->pt
+  {:n (tuple 0 -1)
+   :ne (tuple 1 -1)
+   :e (tuple 1 0)
+   :se (tuple 1 1)
+   :s (tuple 0 1)
+   :sw (tuple -1 1)
+   :w (tuple -1 0)
+   :nw (tuple -1 -1)})
+
+(def dirs
+  (vals dir->pt))
+
+(def cardinal?
+  #{:n :e :s :w})
+
+(def cardinal-dirs
+  (for [[d vec] dir->pt
+        :when (cardinal? d)]
+    vec))
+
+(defn adj
+  ([pt]
+    (map #(+ % pt) dirs)))
+
+(defn cardinal-adj
+  ([pt]
+    (map #(+ % pt) cardinal-dirs)))

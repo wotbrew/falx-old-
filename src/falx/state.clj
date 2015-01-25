@@ -9,6 +9,12 @@
             [clojure.java.io :as io]
             [clojure.tools.logging :refer [info debug error]]))
 
+(defn silent-send!
+  [agent f & args]
+  (do
+    (apply send agent f args)
+    nil))
+
 (def default-game
   "The initial value of the game"
   (->
@@ -19,6 +25,8 @@
                             #{:map :pos})))
 
 (defonce ^{:doc "The current game"} game (agent default-game))
+
+
 (defonce ^{:doc "The set of all concious entities"} conscious (ref #{}))
 (defonce ^{:doc "The last input state"} input (atom nil))
 (defonce ^{:doc "The default font"} font (atom nil))
