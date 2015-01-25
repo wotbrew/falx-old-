@@ -15,13 +15,18 @@
 (defn maybe-end-player-turn!
   [game]
   (when (should-end-player-turn? game)
-    (info "Ending player turn")
+
     (send state/game next-turn)))
+
+(defn should-end-enemy-turn?
+  [game]
+  (every? #(not (can-act? game %)) (enemies game)))
 
 (defn maybe-end-enemy-turn!
   [game]
-  (info "Ending enemy turn")
-  (send state/game next-turn))
+  (when (should-end-enemy-turn? game)
+
+    (send state/game next-turn)))
 
 (defn do-end-turns!
   []

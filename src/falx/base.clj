@@ -239,6 +239,10 @@
   [m e]
   (att m e :enemy?))
 
+(defn enemies
+  [m]
+  (all m :enemy?))
+
 (def selected?
   "Is the entity selected?"
   (att-fn :selected?))
@@ -423,8 +427,14 @@
   (set-ap m e (max-ap m e)))
 
 (defn refresh-players
+  "Refreshes the ap of every player"
   [m]
   (reduce refresh-ap m (players m)))
+
+(defn refresh-enemies
+  "Refreshes the ap of every enemy"
+  [m]
+  (reduce refresh-ap m (enemies m)))
 
 (defn adjacent-to?
   "Is the entity adjacent to the given point?"
@@ -436,7 +446,21 @@
   "Are the 2 entities adjacent to each other?"
   [m a b]
   (when-let [pos (pos m b)]
-    (adjacent-to? m a pos)))
+    (let [mapa (att m a :map)
+          mapb (att m b :map)]
+      (and (= mapa mapb)
+           (adjacent-to? m a pos)))))
+
+(defn all-adjacent-to
+  "Return all entities adjacent to the given point"
+  [m map pt]
+  (mapcat #(at m map %) (pt/adj pt)))
+
+(defn all-adjacent
+  "Returns all the entities adjacent to the given entity"
+  [m e]
+  (when-let [pos (pos m e)]
+    (all-adjacent-to m (att m e :map) pos)))
 
 (defn can-act?
   "Can the entity act at all?"
@@ -453,7 +477,7 @@
    if not for itself due to lack of stamina/ap etc"
   [m e pt]
   (and
-    (not (solid-at? m pt))
+    (not (solid-at? m (att m e :map) pt))
     (adjacent-to? m e pt)))
 
 (defn move-cost
@@ -498,7 +522,7 @@
   (let [pos (pos game e)
         map (att game e :map)
         bounds (map-size game map)
-        pred #(or (= pos %) (not (solid-at? game %)))]
+        pred #(or (= pos %) (not (solid-at? game map %)))]
     (when (and pos map bounds)
       (rest (a* bounds pred pos to)))))
 
@@ -534,7 +558,7 @@
   [game e]
   (let [goto (att game e :goto)]
     (cond
-      (solid-at? game goto) :now-solid
+      (solid-at? game (att game e :map) goto) :now-solid
       :else nil)))
 
 (defn goto-valid?
@@ -548,6 +572,11 @@
   [game e]
   (when-let [pt (next-in-current-path game e)]
     (could-move? game e pt)))
+
+(defn can-move-to-next-in-current-path?
+  [game e]
+  (when-let [pt (next-in-current-path game e)]
+    (can-move? game e pt)))
 
 (defn current-path-valid?
   "Is the current path valid"
@@ -565,6 +594,17 @@
           (update-att e :path rest))
       game)
     game))
+
+(defn hostile-to?
+  "Are the entities hostile to one another?"
+  [m a b]
+  (cond (enemy? m a) (player? m b)
+        (player? m a) (enemy? m b)))
+
+(defn adjacent-hostiles
+  "Returns a seq of adjacent hostiles"
+  [m e]
+  (filter #(hostile-to? m e %) (all-adjacent m e)))
 
 (defn could-attack?
   "Can the given entity `a` attack the other one `b`
@@ -629,11 +669,14 @@
   {:text text
    :color color
    :pos (pos m e)
+   :map (att m e :map)
    :time 30})
 
 (defn add-world-text
   [m world-text]
-  (update m :world-text conj world-text))
+  (if (= (:map m) (:map world-text))
+    (update m :world-text conj world-text)
+    m))
 
 (defn create-attacked-text
   "Creates the attacked text at the target.
@@ -682,7 +725,8 @@
   ""
   [m]
   (-> (case (mode m)
-        :player (refresh-players m)
+        :enemy (refresh-players m)
+        :player (refresh-enemies m)
         m)
       flip-mode))
 

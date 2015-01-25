@@ -191,7 +191,8 @@
 (defn draw-world-texts!
   [game]
   (let [[cw ch] (cell-size game)]
-    (doseq [world-text (:world-text game)]
+    (doseq [world-text (:world-text game)
+            :when  (= (:map game) (:map world-text))]
       (g/with-font-color (:color world-text)
         (when-let [[x y] (:pos world-text)]
           (let [y (- (* y (- ch)) -64 (max (:time world-text) 15))]
@@ -276,6 +277,8 @@
 
   "load a map"
   (def example-map (load-tiled-map "test-resources/test-map.json"))
+  (def example-map2 (load-tiled-map "test-resources/test-map2.json"))
+
   "tiles from tile layers"
   (take 5 (mapcat #(tile-layer->tiles example-map %) (:layers example-map)))
   "tiles"
@@ -289,15 +292,20 @@
 
   (do
     "load the example map into the game"
-    (do (send game creates (concat (tiles example-map) (objects example-map)))
+    (do (send game creates (concat (tiles example-map) (objects example-map)
+                                   (tiles example-map2) (objects example-map2)))
         nil)
     "load the tilemap entity itself into the game"
-    (let [ent (tiled-map-entity example-map)]
+    (let [ent (tiled-map-entity example-map)
+          ent2 (tiled-map-entity example-map2)]
       (send game set-atts (:name ent) ent)
+      (send game set-atts (:name ent2) ent2)
       nil)
     "set the map to be the example map"
     (do (send game assoc :map :test-map) nil))
 
+  (silent-send! game assoc :map :test-map)
+  (silent-send! game assoc :map :test-map2)
 
   "reset the game to its default"
   (do (restart-agent game default-game)
