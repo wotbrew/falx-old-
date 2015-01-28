@@ -317,8 +317,7 @@
 
 (defn look-at-points
   [m e pts]
-  (let [map (att m e :map)
-        m (set-att m e :visible pts)]
+  (let [map (att m e :map)]
     (-> (fn [m pt]
           (reduce (fn [m b]
                     (if (visible-by? m b e)

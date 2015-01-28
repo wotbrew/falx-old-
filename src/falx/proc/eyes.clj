@@ -21,7 +21,9 @@
           now-seen (set/difference points last-visible)]
 
       (send state/game explore-points e now-seen)
-      (send state/game look-at-points e now-seen)
+      (send state/game #(->
+                         (set-att % e :visible points)
+                         (look-at-points e now-seen)))
       (send state/game unlook-at-points e now-hidden))))
 
 (defn eye-loop!
