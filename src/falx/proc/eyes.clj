@@ -15,16 +15,18 @@
   (go
     (let [game @state/game
           map (att game e :map)
-          last-visible (att game e :visible)
-          points (visible-points game e)
-          now-hidden (set/difference last-visible points)
-          now-seen (set/difference points last-visible)]
+          last-points (att game e :visible-points)
+          last-visible (att game e :visible-entities)
 
-      (send state/game explore-points e now-seen)
-      (send state/game #(->
-                         (set-att % e :visible points)
-                         (look-at-points e now-seen)))
-      (send state/game unlook-at-points e now-hidden))))
+          points (into #{} (find-visible-points game e))
+          entities (into #{} (find-visible-entities game e))
+
+          now-seen-points (set/difference points last-points)]
+
+      (send state/game explore-points e now-seen-points)
+      (send state/game set-att e
+            :visible-points points
+            :visible-entities entities))))
 
 (defn eye-loop!
   [e]

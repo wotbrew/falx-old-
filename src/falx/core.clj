@@ -1,4 +1,5 @@
 (ns falx.core
+  (:gen-class)
   (:import (com.badlogic.gdx Gdx)
            (clojure.lang Agent))
   (:require [gdx-loopy.core :refer [loop! on-render-thread]]
@@ -23,6 +24,8 @@
              [main :as ui-main]
              [shared :refer :all]]))
 
+
+
 ;;top level click handler
 
 (defmethod apply-command :primary
@@ -33,7 +36,6 @@
 
 
 ;;tiles
-
 
 (defn gdx-width
   []
@@ -273,7 +275,52 @@
                 (.printStackTrace e))))
           (draw-ui! game))))))
 
+(defn begin!
+  []
+  (loop! #'render!
+         (assoc settings
+           :max-fps 30))
+  @(init!))
+
+(defn start-procs!
+  []
+  (let [bs (ai/brain-spawner)
+        ui-pather (ui-pather/ui-pather)
+        turn-ender (turn-ender/turn-ender)]
+    (start bs)
+    (start ui-pather)
+    (start turn-ender)
+    {:bs bs
+     :ui-pather ui-pather
+     :turn-ender turn-ender}))
+
+(defn load-maps
+  []
+  {:example-map (load-tiled-map "test-resources/test-map.json")
+   :example-map2 (load-tiled-map "test-resources/test-map2.json")})
+
+(defn start-game!
+  [maps]
+  (let [ents (apply concat (for [[_ v] maps]
+                             (concat (tiles v)
+                                     (objects v))))]
+    (send game creates ents)
+    (doseq [[_ v] maps]
+      (send game set-atts
+            (:name v)
+            (tiled-map-entity v)))))
+
+(defn -main
+  [& args]
+  (begin!)
+  (let [procs (start-procs!)
+        maps (load-maps)]
+    (start-game! maps)
+    (send game assoc :map :test-map)
+    nil))
+
 ;;examples
+
 
 (comment
   "begin ze game"

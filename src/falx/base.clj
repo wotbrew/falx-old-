@@ -303,7 +303,11 @@
 
 (defn visible-by?
   [m e observer]
-  (contains? (att m e :visible-by) observer))
+  (contains? (att m observer :visible-entities) e))
+
+(defn point-visible-by?
+  [m e pt]
+  (contains? (att m e :visible-points) pt))
 
 (defn visible-by-player?
   [m e]
@@ -312,8 +316,9 @@
 (def visible-by-player-at
   (at-fn visible-by-player?))
 
-(def visible-by-player-at?
-  (comp boolean first visible-by-player-at))
+(defn visible-by-player-at?
+  [m pt]
+  (some #(point-visible-by? % pt) (players m)))
 
 (defn look-at-points
   [m e pts]
@@ -367,13 +372,19 @@
     (when (and bpt (= amap bmap))
       (los-to? m a bpt))))
 
-(defn visible-points
+(defn find-visible-points
   "Returns the visible points for an entity"
   [m e]
   (let [[x y] (pos m e)
         circle (shapes/filled-circle x y 5)]
-    (into #{} (filter #(los-to? m e %) circle))))
+   (filter #(los-to? m e %) circle)))
 
+(defn find-visible-entities
+  "Returns the entities the current entity can see.
+   This does not cache visibility in anyway"
+  [m e]
+  (->> (find-visible-points m e)
+       (mapcat #(at m (att m e :map) %))))
 
 (defn goto
   "LOL - doesn't perform a goto.
@@ -960,4 +971,3 @@
 (defn top-right
   [m]
   [(width m) (height m)])
-
