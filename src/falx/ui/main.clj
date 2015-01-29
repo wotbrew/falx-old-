@@ -128,7 +128,7 @@
   "A memoized version of filter keys"
   (mem/lru filter-keys :lru/threshold 10))
 
-(def do-not-show-keys #{:visible-entities :visible-points})
+(def do-not-show-keys #{:visible-entities :visible-points :explored-points})
 
 (defn debug-entity-attributes
   "Returns a debug string for the given entities attributes"

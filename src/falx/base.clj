@@ -277,9 +277,15 @@
 (def opaque-at?
   (comp boolean first opaque-at))
 
+(defn same-map?
+  "Are the entities `a` and `b` on the same map?"
+  [m a b]
+  (= (att m a :map) (att m b :map)))
+
 (defn explored-by?
   [m e observer]
-  (contains? (att m e :explored-by) observer))
+  (and (same-map? m e observer)
+       (contains? (att m observer :explored-points) (pos m e))))
 
 (defn explored-by-player?
   [m e]
@@ -291,15 +297,6 @@
 (def explored-by-player-at?
   (comp boolean first explored-by-player-at))
 
-(defn explore-points
-  [m e pts]
-  (let [map (att m e :map)]
-    (-> (fn [m pt]
-          (reduce (fn [m b]
-                    (if (explored-by? m b e)
-                      m
-                      (update-att m b :explored-by (fnil conj #{}) e))) m (at m map pt)))
-        (reduce m pts))))
 
 (defn visible-by?
   [m e observer]
@@ -319,26 +316,6 @@
 (defn visible-by-player-at?
   [m pt]
   (some #(point-visible-by? % pt) (players m)))
-
-(defn look-at-points
-  [m e pts]
-  (let [map (att m e :map)]
-    (-> (fn [m pt]
-          (reduce (fn [m b]
-                    (if (visible-by? m b e)
-                      m
-                      (update-att m b :visible-by (fnil conj #{}) e))) m (at m map pt)))
-        (reduce m pts))))
-
-(defn unlook-at-points
-  [m e pts]
-  (let [map (att m e :map)]
-    (-> (fn [m pt]
-          (reduce (fn [m b]
-                    (if (visible-by? m b e)
-                      (update-att m b :visible-by disj e)
-                      m)) m (at m map pt)))
-        (reduce m pts))))
 
 (defn los*
   [m map apt bpt]
