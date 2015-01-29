@@ -372,11 +372,14 @@
     (when (and bpt (= amap bmap))
       (los-to? m a bpt))))
 
+(def default-visibility-radius
+  10)
+
 (defn find-visible-points
   "Returns the visible points for an entity"
   [m e]
   (let [[x y] (pos m e)
-        circle (shapes/filled-circle x y 5)]
+        circle (shapes/filled-circle x y default-visibility-radius)]
    (filter #(los-to? m e %) circle)))
 
 (defn find-visible-entities
