@@ -5,7 +5,10 @@
      [base :refer :all]
      [lifecycle :refer :all]]
     [falx.proc
-     [eyes :as eyes]]
+     [eyes :as eyes]
+     [interpret :as interpret]
+     [thought :as thought]
+     [act :as act]]
     [silc.core :refer :all]
     [clojure.tools.logging :refer [debug info]]
     [clojure.core.async :refer [go go-loop <! timeout] :as async]
@@ -121,7 +124,10 @@
     (doseq [e new]
       (debug e "now has a brain & eye loop")
       (brain-loop! e)
-      (eyes/eye-loop! e))))
+      (eyes/eye-loop! e)
+      (interpret/interpret-loop! e)
+      (thought/thought-loop! e)
+      (act/act-loop! e))))
 
 (defrecord BrainSpawner
   [kill]

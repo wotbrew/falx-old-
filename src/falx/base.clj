@@ -326,7 +326,7 @@
 (defn visible-by-player-at?
   "Is the given point visible by any player?"
   [m pt]
-  (some #(point-visible-by? % pt) (players m)))
+  (some #(point-visible-by? m % pt) (players m)))
 
 (defn los*
   [m map apt bpt]
@@ -486,6 +486,13 @@
   "Refreshes the ap of every enemy"
   [m]
   (reduce refresh-ap m (enemies m)))
+
+(defn adjacent-points
+  "Returns a seq of adjacent points"
+  [m e]
+  (when-let [pos (pos m e)]
+    (pt/adj pos)))
+
 
 (defn adjacent-to?
   "Is the entity adjacent to the given point?"
@@ -779,6 +786,17 @@
         m)
       flip-mode))
 
+(def default-cell-size
+  "The default cell size used by the game"
+  [32 32])
+
+(defn cell-size
+  "Return the cell size used by the game"
+  [m]
+  (:cell-size m default-cell-size))
+
+(def cell-width (comp first cell-size))
+(def cell-height (comp second cell-size))
 
 ;;commands
 (def cam-slow-speed
@@ -923,17 +941,7 @@
 
 ;;screen
 
-(def default-cell-size
-  "The default cell size used by the game"
-  [32 32])
 
-(defn cell-size
-  "Return the cell size used by the game"
-  [m]
-  (:cell-size m default-cell-size))
-
-(def cell-width (comp first cell-size))
-(def cell-height (comp second cell-size))
 
 (defn mouse-cell
   "Return the pt x,y in the world

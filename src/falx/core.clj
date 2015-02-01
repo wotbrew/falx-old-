@@ -279,7 +279,7 @@
   []
   (loop! #'render!
          (assoc settings
-           :max-fps 30))
+           :max-fps 60))
   @(init!))
 
 (defn start-procs!
