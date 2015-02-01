@@ -305,21 +305,26 @@
 
 
 (defn visible-by?
+  "Is the entity visible by the given `observer` entity?"
   [m e observer]
   (contains? (att m observer :visible-entities) e))
 
 (defn point-visible-by?
+  "Is point visible by the given entity?"
   [m e pt]
   (contains? (att m e :visible-points) pt))
 
 (defn visible-by-player?
+  "Is the given entity visible by any player?"
   [m e]
   (some #(visible-by? m e %) (players m)))
 
 (def visible-by-player-at
+  "Return the visible entities at the given point"
   (at-fn visible-by-player?))
 
 (defn visible-by-player-at?
+  "Is the given point visible by any player?"
   [m pt]
   (some #(point-visible-by? % pt) (players m)))
 
@@ -356,7 +361,7 @@
       (los-to? m a bpt))))
 
 (def default-visibility-radius
-  10)
+  7)
 
 (defn find-visible-points
   "Returns the visible points for an entity"
@@ -492,10 +497,8 @@
   "Are the 2 entities adjacent to each other?"
   [m a b]
   (when-let [pos (pos m b)]
-    (let [mapa (att m a :map)
-          mapb (att m b :map)]
-      (and (= mapa mapb)
-           (adjacent-to? m a pos)))))
+    (and (same-map? m a b)
+         (adjacent-to? m a pos))))
 
 (defn all-adjacent-to
   "Return all entities adjacent to the given point"
@@ -794,6 +797,22 @@
   [m]
   (* (:delta m 0) (cam-speed m)))
 
+(defn move-cam
+  "Move the camera to the given point"
+  [m pos]
+  (assoc m :cam pos))
+
+(defn move-cam-to-entity
+  "Points the camera at the given entity"
+  [m e]
+  (let [[x y] (pos m e)
+        [cw ch] (cell-size m)]
+    (if (and x y)
+      (move-cam m
+                (tuple (* x cw)
+                       (* y (- ch))))
+      m)))
+
 (defmethod apply-command :cam-up
   [m _]
   (update m :cam (fnil pt/+ [0 0]) [0 (cam-shift m)]))
@@ -813,35 +832,40 @@
 (defn handle-primary-in-game
   [m]
   (cond
-
     (selectable-at-mouse m) (select-at-mouse m)
     (attackable-at-mouse m) (attack-at-mouse m)
     :else (selected-goto-mouse m)))
 
+(defn key-select
+  "Perform the selection and move camera to the entity.
+   This should be called when you select a player using the keyboard"
+  [m e]
+  (-> (perform-select m e)
+      (move-cam-to-entity e)))
 
 (defmethod apply-command :select-1
   [m _]
-  (perform-select m (player m 0)))
+  (key-select m (player m 0)))
 
 (defmethod apply-command :select-2
   [m _]
-  (perform-select m (player m 1)))
+  (key-select m (player m 1)))
 
 (defmethod apply-command :select-3
   [m _]
-  (perform-select m (player m 2)))
+  (key-select m (player m 2)))
 
 (defmethod apply-command :select-4
   [m _]
-  (perform-select m (player m 3)))
+  (key-select m (player m 3)))
 
 (defmethod apply-command :select-5
   [m _]
-  (perform-select m (player m 4)))
+  (key-select m (player m 4)))
 
 (defmethod apply-command :select-6
   [m _]
-  (perform-select m (player m 5)))
+  (key-select m (player m 5)))
 
 (def anim-speed 100)
 

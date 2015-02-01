@@ -144,7 +144,7 @@
   [game]
   (str/join
     "\n"
-    (concat [(select-keys game [:fps :screen :map])
+    (concat [(select-keys game [:fps :screen :map :cam])
              (select-keys game [:mouse-screen :mouse-world :mouse-cell])
              (str "commands: " (:commands game))
              (str "in-game? " (mouse-in-game? game))

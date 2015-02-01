@@ -143,12 +143,11 @@
 
 (defn draw-creature-circle!
   [game e x y]
-  (when (enemy? game e)
-    (g/with-color color/red
-      (g/draw-point! :selected x y)))
-  (when (selected? game e)
-    (g/with-color color/green
-      (g/draw-point! :selected x y))))
+  (cond
+   (enemy? game e) (g/with-color color/red
+                     (g/draw-point! :selected x y))
+   (selected? game e) (g/with-color color/green
+                        (g/draw-point! :selected x y))))
 
 (defn draw-creature!
   [game e x y]
@@ -215,7 +214,8 @@
   [game]
   (let [[cw ch] (cell-size game)]
     (doseq [world-text (:world-text game)
-            :when  (= (:map game) (:map world-text))]
+            :when  (and (= (:map game) (:map world-text))
+                        (visible-by-player-at? game (:pos world-text)))]
       (g/with-font-color (:color world-text)
         (when-let [[x y] (:pos world-text)]
           (let [y (- (* y (- ch)) -64 (max (:time world-text) 15))]

@@ -14,7 +14,6 @@
   [game e]
   (let [map (att game e :map)
         last-points (att game e :visible-points)
-        last-visible (att game e :visible-entities)
 
         points (into #{} (find-visible-points game e))
         entities (into (im/int-set) (find-entities-in game map points))
