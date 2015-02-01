@@ -389,12 +389,12 @@
   "LOL - doesn't perform a goto.
    Rather adds the intention to goto the given point."
   [m e pt]
-  (set-att m e :goto pt))
+  (update-att m e :thoughts assoc :goto pt))
 
 (defn forget-goto
   "Clears the goto intention from the entity"
   [m e]
-  (delete-att m e :goto))
+  (update-att m e :thoughts dissoc :goto))
 
 (defn selected-goto
   "Instructs the selected entities to goto the given pt"
@@ -606,13 +606,13 @@
 (defn pathing-to-goto?
   "Is the entity currently pathing to its goto?"
   [game e]
-  (when-let [goto (att game e :goto)]
+  (when-let [goto (:goto (att game e :thoughts))]
     (= goto (last (current-path game e)))))
 
 (defn goto-invalid?
   "Is the entities goto position now invalid?"
   [game e]
-  (let [goto (att game e :goto)]
+  (let [goto (:goto (att game e :thoughts))]
     (cond
       (solid-at? game (att game e :map) goto) :now-solid
       :else nil)))

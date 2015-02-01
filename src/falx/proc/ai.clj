@@ -18,82 +18,8 @@
 
 ;;brain
 (def brain-tick 100)
-(def step-tick 100)
-(def attack-tick 350)
 (def brain-spawner-tick 500)
 
-(defn forget-goto!
-  [e]
-  (send state/game forget-goto e))
-
-(defn bstep!
-  [e]
-  (go
-    (send state/game step-current-path e)
-    (<! (timeout step-tick))))
-
-(defn bpath!
-  [e goto]
-  (let [game @game
-        path (path game e goto)]
-    (when (not-empty path)
-      (send state/game set-path e path))))
-
-(defn bwalk!
-  [e]
-  (go
-    (let [game @game]
-      (when-let [goto (att game e :goto)]
-        (cond
-          (should-cancel-all-movement? game e) (forget-goto! e)
-          (current-path-valid? game e) (<! (bstep! e))
-          (goto-valid? game e) (bpath! e goto)
-          :else (forget-goto! e))))))
-
-(defn pick-random-adjacent-point
-  [game e]
-  (when-let [pos (pos game e)]
-    (rand-nth (pt/adj pos))))
-
-(defn bwalk-random!
-  [e]
-  (go
-    (let [game @game]
-      (when (not (att game e :goto))
-        (let [n (pick-random-adjacent-point game e)]
-          (when (can-move? game e n)
-            (send state/game move e n)
-            (<! (timeout step-tick))))))))
-
-(defn battack!
-  [e]
-  (go
-    (let [game @game
-          adjacent (first (adjacent-hostiles game e))]
-      (when (and adjacent (can-attack? game e adjacent))
-        (send state/game attack e adjacent)
-        (<! (timeout attack-tick))))))
-
-(defn pick-a-target
-  [m]
-  )
-
-(defn random-bark!
-  [e]
-  (when (= 1 (rand-int 10))
-    (send game #(add-world-text % (entity-world-text % e "Zugzug" color/white)))))
-
-(defn do-brain!
-  "Performed on each brain tick"
-  [e]
-  (go
-    (when (can-act? @state/game e)
-      (<! (bwalk! e))
-      (when (enemy? @state/game e)
-        (<! (battack! e))
-        (<! (bwalk-random! e))
-
-        #_(random-bark! e)))))
 
 (defn brain-loop!
   [e]
@@ -105,11 +31,6 @@
         (debug e "is dead - removing brain")
         (dosync (commute conscious disj e)))
       (when-not dead?
-        (try
-          (<! (do-brain! e))
-          (catch Throwable e
-            (.printStackTrace e)
-            (<! (timeout 1000))))
         (<! (timeout brain-tick))
         (recur)))))
 

@@ -6,12 +6,25 @@
 
 (def thought-tick 200)
 
+(defn attack-remote-enemy!
+  [game e]
+  (let [enemies (att game e :visible-enemies)]
+    (when (seq enemies)
+      (send state/game update-att e :thoughts assoc :move-to-attack (first enemies)))))
+
+(defn attack-adjacent-enemy!
+  [game e]
+  (let [enemies (adjacent-hostiles game e)
+        enemy (first enemies)]
+    (when (and enemy (can-attack? game e enemy))
+      (send state/game update-att e :thoughts assoc :attack enemy))))
+
 (defn do-thought!
   [e]
   (go
-    (let [game @state/game
-          enemies (att game e :visible-enemies)]
-     (send state/game update-att e :thoughts assoc :attack (first enemies)))))
+    (let [game @state/game]
+      (or (attack-adjacent-enemy! game e)
+          (attack-remote-enemy! game e)))))
 
 (defn thought-loop!
   [e]

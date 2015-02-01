@@ -207,7 +207,7 @@
       (draw-basic-layer! game (:map game) :base cw ch)
       (draw-basic-layer! game (:map game) :decor cw ch)
       (draw-basic-layer! game (:map game) :object cw ch)
-      (draw-ui-path! game)
+      (when (mode= game :player) (draw-ui-path! game))
       (draw-creature-layer! game (:map game) cw ch))))
 
 (defn draw-world-texts!
