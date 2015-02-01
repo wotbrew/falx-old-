@@ -84,6 +84,7 @@
 
 (def mepmp (mem2 (fn [map pos] {:map map :pos pos})))
 (def at-ave-key #{:map :pos})
+
 (defn at
   "Find the entities at the given point (and map)"
   ([game pt]
@@ -282,6 +283,11 @@
   [m a b]
   (= (att m a :map) (att m b :map)))
 
+(defn on-player-map?
+  "Is the entity on the same map as at least one player?"
+  [m e]
+  (some #(same-map? m e %) (players m)))
+
 (defn explored-by?
   [m e observer]
   (and (same-map? m e observer)
@@ -359,12 +365,20 @@
         circle (shapes/filled-circle x y default-visibility-radius)]
    (filter #(los-to? m e %) circle)))
 
+(defn find-entities-in
+  "Find all the entities in any of the given points"
+  [m map points]
+  (mapcat #(at m map %) points))
+
+
+
 (defn find-visible-entities
   "Returns the entities the current entity can see.
    This does not cache visibility in anyway"
   [m e]
   (->> (find-visible-points m e)
        (mapcat #(at m (att m e :map) %))))
+
 
 (defn goto
   "LOL - doesn't perform a goto.

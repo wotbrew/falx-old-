@@ -8,6 +8,7 @@
                            [org.clojure/core.memoize "0.5.6"]
                            [org.clojure/core.logic "0.8.8"]
                            [org.clojure/tools.logging "0.3.1"]
+                           [org.clojure/data.int-map "0.1.0"]
                            [log4j "1.2.16"]
                            [gdx-loopy "0.1.0-SNAPSHOT"]
                            [gdx-2d "0.1.0-SNAPSHOT"]

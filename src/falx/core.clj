@@ -299,6 +299,11 @@
   {:example-map (load-tiled-map "test-resources/test-map.json")
    :example-map2 (load-tiled-map "test-resources/test-map2.json")})
 
+(defn clear-game!
+  []
+  (send game (constantly default-game))
+  nil)
+
 (defn start-game!
   [maps]
   (let [ents (apply concat (for [[_ v] maps]
