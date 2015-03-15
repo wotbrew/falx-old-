@@ -129,6 +129,61 @@
   [type]
   (fn [game e] (= type (att game e :type))))
 
+;;interaction
+
+(defn interactable?
+  [m e]
+  (att m e :interactable?))
+
+(def interactable-at-mouse
+  (comp first (at-mouse-fn interactable?)))
+
+(defmulti interact
+  (fn [m e] (att m e :type)))
+
+(defmethod interact :default
+  [m e]
+  m)
+
+(defn interact-at-mouse
+  [m]
+  (let [interactable (interactable-at-mouse m)]
+    (interact m interactable)))
+
+;;doors
+
+(def door?
+  (type-is-fn :door))
+
+(defn open?
+  "Is the given door open?"
+  [m e]
+  (att m e :open?))
+
+(defn open
+  "Opens the door"
+  [m e]
+  (set-att m e
+           :sprite (att m e :open-sprite)
+           :open? true
+           :solid? false
+           :opaque? false))
+
+(defn close
+  "Closes the door"
+  [m e]
+  (set-att m e
+           :sprite (att m e :closed-sprite)
+           :open? false
+           :solid? true
+           :opaque? true))
+
+(defmethod interact :door
+  [m e]
+  (if (open? m e)
+    (close m e)
+    (open m e)))
+
 (def creature?
   "Is the entity a creature?"
   (type-is-fn :creature))
@@ -845,11 +900,19 @@
   (update m :cam (fnil pt/+ [0 0]) [(cam-shift m) 0]))
 
 (defn handle-primary-in-game
+  "Handles primary (left) clicks in game area"
   [m]
   (cond
     (selectable-at-mouse m) (select-at-mouse m)
     (attackable-at-mouse m) (attack-at-mouse m)
     :else (selected-goto-mouse m)))
+
+(defn handle-secondary-in-game
+  "Handles secondary (right) clicks in the game area"
+  [m]
+  (cond
+    (interactable-at-mouse m) (interact-at-mouse m)
+    :else m))
 
 (defn key-select
   "Perform the selection and move camera to the entity.
@@ -956,6 +1019,7 @@
       :sprite (if open?
                 (:open-sprite ent)
                 (:closed-sprite ent))
+      :interactable? true
       :solid? (not open?)
       :opaque? (not open?))))
 
@@ -972,11 +1036,13 @@
       :opaque? (= terrain :wall))))
 
 (defn create-entity
+  "Creates an entity"
   [m ent]
   (create m (assoc (cook-entity ent)
               :id (id m))))
 
 (defn create-entities
+  "Creates many entities"
   [m coll]
   (reduce create-entity m coll))
 

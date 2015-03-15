@@ -114,6 +114,11 @@
       handle-primary-player-buffers
       handle-primary-bottom-right-buttons))
 
+(defn handle-secondary
+  "Handles right clicks in ui area"
+  [m]
+  m)
+
 ;;rendering
 
 ;;debug

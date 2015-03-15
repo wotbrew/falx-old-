@@ -34,6 +34,11 @@
     (handle-primary-in-game m)
     (ui-main/handle-primary m)))
 
+(defmethod apply-command :secondary
+  [m _]
+  (if (ui-main/mouse-in-game? m)
+    (handle-secondary-in-game m)
+    (ui-main/handle-secondary m)))
 
 ;;tiles
 
@@ -239,7 +244,9 @@
 (defn mouse-sprite
   [game]
   (cond
+    (not (ui-main/mouse-in-game? game)) :mouse
     (attackable-at-mouse game) (mouse-attack-sprite game)
+    (interactable-at-mouse game) :mouse-select
     (selectable-at-mouse game) :mouse-select
     :else :mouse))
 
