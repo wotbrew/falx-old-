@@ -85,6 +85,12 @@
 (def mepmp (mem2 (fn [map pos] {:map map :pos pos})))
 (def at-ave-key #{:map :pos})
 
+(defn same-map?
+  "Are the entities `a` and `b` on the same map?"
+  [m a b]
+  (= (att m a :map) (att m b :map)))
+
+
 (defn at
   "Find the entities at the given point (and map)"
   ([game pt]
@@ -129,61 +135,6 @@
   [type]
   (fn [game e] (= type (att game e :type))))
 
-;;interaction
-
-(defn interactable?
-  [m e]
-  (att m e :interactable?))
-
-(def interactable-at-mouse
-  (comp first (at-mouse-fn interactable?)))
-
-(defmulti interact
-  (fn [m e] (att m e :type)))
-
-(defmethod interact :default
-  [m e]
-  m)
-
-(defn interact-at-mouse
-  [m]
-  (let [interactable (interactable-at-mouse m)]
-    (interact m interactable)))
-
-;;doors
-
-(def door?
-  (type-is-fn :door))
-
-(defn open?
-  "Is the given door open?"
-  [m e]
-  (att m e :open?))
-
-(defn open
-  "Opens the door"
-  [m e]
-  (set-att m e
-           :sprite (att m e :open-sprite)
-           :open? true
-           :solid? false
-           :opaque? false))
-
-(defn close
-  "Closes the door"
-  [m e]
-  (set-att m e
-           :sprite (att m e :closed-sprite)
-           :open? false
-           :solid? true
-           :opaque? true))
-
-(defmethod interact :door
-  [m e]
-  (if (open? m e)
-    (close m e)
-    (open m e)))
-
 (def creature?
   "Is the entity a creature?"
   (type-is-fn :creature))
@@ -212,6 +163,11 @@
   "Returns the set of all the players"
   [m]
   (all m :player?))
+
+(defn on-player-map?
+  "Is the entity on the same map as at least one player?"
+  [m e]
+  (some #(same-map? m e %) (players m)))
 
 (defn sorted-players
   [m]
@@ -243,6 +199,15 @@
   "Returns the first selected entity (or nil)"
   [m]
   (first (selected m)))
+
+(defn nearest-entity-to
+  [m pt entities]
+  (first (sort-by #(pt/precise-dist (pos m %) pt) entities)))
+
+(defn nearest-selected
+  [m e]
+  (when-let [pos (pos m e)]
+    (nearest-entity-to m pos (filter #(same-map? m e %) (selected m)))))
 
 (defn unselect
   "Unselects the entity"
@@ -329,16 +294,6 @@
 
 (def opaque-at?
   (comp boolean first opaque-at))
-
-(defn same-map?
-  "Are the entities `a` and `b` on the same map?"
-  [m a b]
-  (= (att m a :map) (att m b :map)))
-
-(defn on-player-map?
-  "Is the entity on the same map as at least one player?"
-  [m e]
-  (some #(same-map? m e %) (players m)))
 
 (defn explored-by?
   [m e observer]
@@ -448,10 +403,16 @@
   [m e]
   (update-att m e :thoughts dissoc :goto))
 
+(defn human-goto
+  [m e pt]
+  (-> m
+      (goto e pt)
+      (update-att e :thoughts dissoc :interact)))
+
 (defn selected-goto
   "Instructs the selected entities to goto the given pt"
   [m pt]
-  (reduce #(goto %1 %2 pt) m (selected m)))
+  (reduce #(human-goto %1 %2 pt) m (selected m)))
 
 (defn selected-goto-mouse
   "Instructs the selected entities to goto the mouse position"
@@ -559,6 +520,10 @@
     (and (same-map? m a b)
          (adjacent-to? m a pos))))
 
+(defn adjacent-to-selected?
+  [m e]
+  (some #(adjacent? m e %) (selected m)))
+
 (defn all-adjacent-to
   "Return all entities adjacent to the given point"
   [m map pt]
@@ -570,6 +535,22 @@
   (when-let [pos (pos m e)]
     (all-adjacent-to m (att m e :map) pos)))
 
+(defn or-uncosted
+  [m b]
+  (or (mode= m :real)
+      b))
+
+(defn precise-dist-to
+  "Returns the precise distance from the entity to the point"
+  [m e pt]
+  (pt/precise-dist (pos m e) pt))
+
+(defn nearest-adjacent
+  [m e target]
+  (let [adjacent (adjacent-points m target)
+        fadj (first (sort-by #(precise-dist-to m e %) (filter #(not (solid-at? m %)) adjacent)))]
+    fadj))
+
 (defn can-act?
   "Can the entity act at all?"
   [m e]
@@ -579,6 +560,74 @@
       (enemy? m e) (mode= m :enemy)
       :else true)
     (pos? (current-ap m e))))
+
+
+;;interaction
+
+(defn interactable?
+  [m e]
+  (att m e :interactable?))
+
+(def interactable-at-mouse
+  (comp first (at-mouse-fn interactable?)))
+
+(defn just-interact [& args] (first args))
+
+(defmulti just-interact
+  (fn [m a b] (att m b :type)))
+
+(defmethod just-interact :default
+  [m a b]
+  m)
+
+(defn interact
+  [m a b]
+  (if (adjacent? m a b)
+    (-> (just-interact m a b)
+        (update-att a :thoughts dissoc :interact))
+    (update-att m a :thoughts assoc :interact b)))
+
+(defn interact-at-mouse
+  [m]
+  (let [e (interactable-at-mouse m)]
+    (if-let [nearest (nearest-selected m e)]
+      (interact m nearest e))))
+
+;;doors
+
+(def door?
+  (type-is-fn :door))
+
+(defn open?
+  "Is the given door open?"
+  [m e]
+  (att m e :open?))
+
+(defn open
+  "Opens the door"
+  [m e]
+  (set-att m e
+           :sprite (att m e :open-sprite)
+           :open? true
+           :solid? false
+           :opaque? false))
+
+(defn close
+  "Closes the door"
+  [m e]
+  (set-att m e
+           :sprite (att m e :closed-sprite)
+           :open? false
+           :solid? true
+           :opaque? true))
+
+(defmethod just-interact :door
+  [m a b]
+  (if (open? m b)
+    (close m b)
+    (open m b)))
+
+;;movement
 
 (defn could-move?
   "Could the entity move to the point
@@ -829,11 +878,20 @@
   [m]
   (assoc m :mode (invert-mode (mode m))))
 
+(defn forget-thoughts
+  [m e]
+  (delete-att m e :thoughts))
+
+(defn player-forget-thoughts
+  [m]
+  (reduce forget-thoughts m (players m)))
+
 (defn next-turn
   ""
   [m]
   (-> (case (mode m)
-        :enemy (refresh-players m)
+        :enemy (-> (refresh-players m)
+                   (player-forget-thoughts))
         :player (refresh-enemies m)
         m)
       flip-mode))

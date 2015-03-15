@@ -35,10 +35,9 @@
      (goto-valid? game e) (find-path game e goto)
      :else (forget-goto! e))))
 
-(defn do-move-to-attack!
+(defn do-move-to-target!
   [game e target]
-  (let [adjacent (adjacent-points game target)
-        fadj (first (filter #(not (solid-at? game %)) adjacent))]
+  (let [fadj (nearest-adjacent game e target)]
     (if (and (<= 2 (current-ap game e))
              (not (adjacent? game e target)))
       (when (and fadj (not= (:goto (att game e :thoughts)) fadj))
@@ -64,7 +63,13 @@
     (let [attack (:attack thoughts)
           move-to (:move-to-attack thoughts)]
       (or (and attack (<! (do-attack! game e attack)))
-          (and move-to (do-move-to-attack! game e move-to))))))
+          (and move-to (do-move-to-target! game e move-to))))))
+
+(defn do-interact!
+  [game e target]
+  (if (not (adjacent? game e target))
+    (do-move-to-target! game e target)
+    (send state/game interact e target)))
 
 (defn do-act!
   [game e]
@@ -75,6 +80,8 @@
         (or (and (not player?) (<! (do-non-player-actions! game e thoughts)))
             (when-let [goto (:goto thoughts)]
               (<! (do-walk! game e goto)))
+            (when-let [interact (:interact thoughts)]
+              (do-interact! game e interact))
             (and (not player?) (forfit! e)))))))
 
 (defn act-loop!
