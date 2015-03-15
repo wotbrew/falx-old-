@@ -3,6 +3,11 @@
 
  :goblin-slave ["Goblins" [0 0 32 32]]
 
+ :stair-down ["Features" [0 0 32 32]]
+ :stair-up ["Features" [32 0 32 32]]
+ :door-open ["Features" [96 0 32 32]]
+ :door-closed ["Features" [128 0 32 32]]
+
  :selected ["Misc" [0 0 32 32]]
  :green-flag ["Misc" [0 64 32 32]]
  :yellow-flag ["Misc" [32 64 32 32]]

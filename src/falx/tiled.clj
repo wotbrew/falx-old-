@@ -35,6 +35,7 @@
                 id (+ id firstgid)]]
       {:tid id
        :sprite [(atlas-file image) pos]
+       :type :terrain
        :terrain terrain})))
 
 (defn tile-layer->tiles

@@ -250,9 +250,7 @@
 (defn solid?
   "Is the entity solid?"
   [m e]
-  (or (att m e :solid?)
-      (= :wall (att m e :terrain))
-      (creature? m e)))
+  (att m e :solid?))
 
 (def solid-at
   "Returns a seq of solid entities at the given point"
@@ -269,8 +267,7 @@
 (defn opaque?
   "Is the entity opaque?"
   [m e]
-  (or (att m e :opaque?)
-      (= :wall (att m e :terrain))))
+  (att m e :opaque?))
 
 (def opaque-at
   (at-fn opaque?))
@@ -939,9 +936,51 @@
       animate-hit-frames
       animate-word-texts))
 
+;;creating
+
+(defmulti cook-entity
+  "Performs some transformation on the entity to establish some default
+    properties when before the entity is created.
+
+    e.g all creatures are solid."
+  :type)
+
+(defmethod cook-entity :default
+  [ent]
+  ent)
+
+(defmethod cook-entity :door
+  [ent]
+  (let [open? (:open? ent)]
+    (assoc ent
+      :sprite (if open?
+                (:open-sprite ent)
+                (:closed-sprite ent))
+      :solid? (not open?)
+      :opaque? (not open?))))
+
+(defmethod cook-entity :creature
+  [ent]
+  (assoc ent
+    :solid? true))
+
+(defmethod cook-entity :terrain
+  [ent]
+  (let [terrain (:terrain ent)]
+    (assoc ent
+      :solid? (= terrain :wall)
+      :opaque? (= terrain :wall))))
+
+(defn create-entity
+  [m ent]
+  (create m (assoc (cook-entity ent)
+              :id (id m))))
+
+(defn create-entities
+  [m coll]
+  (reduce create-entity m coll))
+
 ;;screen
-
-
 
 (defn mouse-cell
   "Return the pt x,y in the world

@@ -309,7 +309,7 @@
   (let [ents (apply concat (for [[_ v] maps]
                              (concat (tiles v)
                                      (objects v))))]
-    (send game creates ents)
+    (send game create-entities ents)
     (doseq [[_ v] maps]
       (send game set-atts
             (:name v)
@@ -365,8 +365,9 @@
 
   (do
     "load the example map into the game"
-    (do (send game creates (concat (tiles example-map) (objects example-map)
-                                   (tiles example-map2) (objects example-map2)))
+    (do (send game create-entities
+              (concat (tiles example-map) (objects example-map)
+                      (tiles example-map2) (objects example-map2)))
         nil)
     "load the tilemap entity itself into the game"
     (let [ent (tiled-map-entity example-map)
