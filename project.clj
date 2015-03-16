@@ -17,9 +17,11 @@
                            [cheshire "5.3.1"]
                            [clj-tuple "0.1.7"]]
             :main falx.core
+            :repl-options {:init-ns falx.core
+                           :init (-main)}
             :global-vars {*warn-on-reflection* true}
             :java-source-paths ["src-java"]
-            :jvm-opts ["-server" "-Xmx512m" "-Xms512m"]
+            :jvm-opts ["-server" "-Xmx1g" "-Xms1g"]
             :repositories [["sonatype"
                             "https://oss.sonatype.org/content/repositories/releases/"]]
             :profiles {:dev {:dependencies   [[org.clojure/tools.trace "0.7.8"]
