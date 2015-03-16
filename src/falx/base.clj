@@ -672,6 +672,11 @@
   (or (should-cancel-all-movement? game e)
       (< (current-ap game e) (move-cost (pos game e) pt))))
 
+(defn in-bounds?
+  [[x y] [w h]]
+  (and (< -1 x w)
+       (< -1 y h)))
+
 (defn path
   "Finds a path for the given entity to the
    given point."
@@ -680,7 +685,10 @@
         map (att game e :map)
         bounds (map-size game map)
         pred #(or (= pos %) (not (solid-at? game map %)))]
-    (when (and pos map bounds)
+    (when (and pos map bounds
+               (in-bounds? to bounds)
+               (not (solid-at? game map to))
+               (seq (at game map to)))
       (rest (a* bounds pred pos to)))))
 
 (defn path-to-mouse
