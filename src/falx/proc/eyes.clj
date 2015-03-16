@@ -8,7 +8,7 @@
             [clojure.set :as set]
             [clojure.data.int-map :as im]))
 
-(def eye-tick 200)
+(def eye-tick 500)
 
 (defn just-do-eyes!
   [game e]
