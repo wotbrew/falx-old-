@@ -32,8 +32,9 @@
                  "properties":
                     {
                      "closed-sprite":":door-closed",
+                     "locked":"15",
                      "open-sprite":":door-open",
-                     "open?":"true"
+                     "open?":"false"
                     },
                  "type":":door",
                  "visible":true,

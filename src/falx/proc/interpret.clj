@@ -12,7 +12,7 @@
   (go
     (let [game @state/game
           visible (att game e :visible-entities)
-          enemies (filter #(hostile-to? game e %) visible)]
+          enemies (filterv #(hostile-to? game e %) visible)]
       (send state/game set-att e :visible-enemies enemies))))
 
 (defn interpret-loop!

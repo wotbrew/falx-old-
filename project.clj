@@ -21,7 +21,7 @@
                            :init (-main)}
             :global-vars {*warn-on-reflection* true}
             :java-source-paths ["src-java"]
-            :jvm-opts ["-server" "-Xmx1g" "-Xms1g"]
+            :jvm-opts ["-server" "-Xmx512m" "-Xms512m"]
             :repositories [["sonatype"
                             "https://oss.sonatype.org/content/repositories/releases/"]]
             :profiles {:dev {:dependencies   [[org.clojure/tools.trace "0.7.8"]

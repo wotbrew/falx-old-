@@ -593,39 +593,6 @@
     (if-let [nearest (nearest-selected m e)]
       (interact m nearest e))))
 
-;;doors
-
-(def door?
-  (type-is-fn :door))
-
-(defn open?
-  "Is the given door open?"
-  [m e]
-  (att m e :open?))
-
-(defn open
-  "Opens the door"
-  [m e]
-  (set-att m e
-           :sprite (att m e :open-sprite)
-           :open? true
-           :solid? false
-           :opaque? false))
-
-(defn close
-  "Closes the door"
-  [m e]
-  (set-att m e
-           :sprite (att m e :closed-sprite)
-           :open? false
-           :solid? true
-           :opaque? true))
-
-(defmethod just-interact :door
-  [m a b]
-  (if (open? m b)
-    (close m b)
-    (open m b)))
 
 ;;movement
 
@@ -903,6 +870,48 @@
         :player (refresh-enemies m)
         m)
       flip-mode))
+
+
+;;doors
+
+(def door?
+  (type-is-fn :door))
+
+(defn open?
+  "Is the door open?"
+  [m e]
+  (att m e :open?))
+
+(defn locked?
+  "Is the door locked?"
+  [m e]
+  (boolean (att m e :locked)))
+
+(defn open
+  "Opens the door"
+  [m e]
+  (if (locked? m e)
+    (add-world-text m (entity-world-text m e "*locked*" color/white))
+    (set-att m e
+             :sprite (att m e :open-sprite)
+             :open? true
+             :solid? false
+             :opaque? false)))
+
+(defn close
+  "Closes the door"
+  [m e]
+  (set-att m e
+           :sprite (att m e :closed-sprite)
+           :open? false
+           :solid? true
+           :opaque? true))
+
+(defmethod just-interact :door
+  [m a b]
+  (if (open? m b)
+    (close m b)
+    (open m b)))
 
 (def default-cell-size
   "The default cell size used by the game"
