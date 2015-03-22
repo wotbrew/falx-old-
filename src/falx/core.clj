@@ -245,10 +245,24 @@
   [game]
   (cond
     (not (ui-main/mouse-in-game? game)) :mouse
+    (not (explored-by-player-at? game (:mouse-cell game))) :mouse
     (attackable-at-mouse game) (mouse-attack-sprite game)
     (interactable-at-mouse game) :mouse-select
     (selectable-at-mouse game) :mouse-select
     :else :mouse))
+
+(defn interactable-overlay-sprite
+  [game]
+  (let [e (interactable-at-mouse game)]
+    (cond
+      (and (door? game e)
+           (locked? game e)) :mechanisms)))
+
+(defn mouse-overlay-sprite
+  [game]
+  (cond
+    (not (explored-by-player-at? game (:mouse-cell game))) nil
+    (interactable-at-mouse game) (interactable-overlay-sprite game)))
 
 (defn draw-mouse!
   [game]
@@ -257,7 +271,9 @@
         [_ cs] (cell-size game)]
     (when (and x y)
       (let [sprite (or (mouse-sprite game) :mouse)]
-        (g/draw-point! sprite x (- h y cs))))))
+        (g/draw-point! sprite x (- h y cs))
+        (when-let [overlay (mouse-overlay-sprite game)]
+          (g/draw-point! overlay (+ x (/ cs 4)) (- h y cs (/ cs 4))))))))
 
 
 (defn draw-ui!
@@ -313,14 +329,14 @@
 
 (defn start-game!
   [maps]
+  (doseq [[_ v] maps]
+    (send game set-atts
+          (:name v)
+          (tiled-map-entity v)))
   (let [ents (apply concat (for [[_ v] maps]
                              (concat (tiles v)
                                      (objects v))))]
-    (send game create-entities ents)
-    (doseq [[_ v] maps]
-      (send game set-atts
-            (:name v)
-            (tiled-map-entity v)))))
+    (send game create-entities ents)))
 
 (defn -main
   [& args]

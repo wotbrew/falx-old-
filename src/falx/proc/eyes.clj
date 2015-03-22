@@ -21,7 +21,7 @@
         now-seen-points (set/difference points last-points)]
 
         (send state/game set-att e
-              :explored-points (into (att game e :explored-points #{}) now-seen-points)
+              :explored-points (update (att game e :explored-points {}) map (fnil into #{}) now-seen-points)
               :visible-points points
               :visible-entities entities)))
 

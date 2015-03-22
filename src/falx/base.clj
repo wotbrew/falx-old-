@@ -297,8 +297,7 @@
 
 (defn explored-by?
   [m e observer]
-  (and (same-map? m e observer)
-       (contains? (att m observer :explored-points) (pos m e))))
+  (contains? (get (att m observer :explored-points) (att m e :map)) (pos m e)))
 
 (defn explored-by-player?
   [m e]
