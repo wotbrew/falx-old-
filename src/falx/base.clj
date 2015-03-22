@@ -356,7 +356,9 @@
   [m a bpt]
   (let [apt (pos m a)]
     (when (and apt bpt)
-      (los*? m (att m a :map) bpt (los-to m a bpt)))))
+      (or
+        (los*? m (att m a :map) bpt (los-to m a bpt))
+        (los*? m (att m a :map) apt (los* m (att m a :map) bpt apt))))))
 
 (defn los?
   [m a b]

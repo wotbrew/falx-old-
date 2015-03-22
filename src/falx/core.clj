@@ -298,11 +298,13 @@
                 (.printStackTrace e))))
           (draw-ui! game))))))
 
+(def default-fps 60)
+
 (defn begin!
   []
   (loop! #'render!
          (assoc settings
-           :max-fps 60))
+           :max-fps default-fps))
   @(init!))
 
 (defn start-procs!
@@ -354,7 +356,7 @@
   "begin ze game"
   (loop! #'render!
          (assoc settings
-                :max-fps 60))
+                :max-fps default-fps))
   "Init ze game"
   (init!)
 
