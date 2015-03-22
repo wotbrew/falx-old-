@@ -797,6 +797,10 @@
                :offset (defend-offset m target e)
                :hit-time 4)))
 
+(defn log
+  [m text]
+  (update m :log (fnil conj '()) text))
+
 (defn entity-world-text
   [m e text color]
   {:text text
@@ -828,7 +832,8 @@
   (-> (set-attack-offsets m e target)
       (create-attacked-text target)
       (create-attack-bark e)
-      (update-ap e - 2)))
+      (update-ap e - 2)
+      (log (str (att m e :name "???") " attacked " (att m target :name "???")))))
 
 (defn attack
   "Have `e` attack `target` if possible"
@@ -889,17 +894,18 @@
   (boolean (att m e :lock)))
 
 (defn unlock
-  [m e]
+  [m a e]
   (-> (reduce #(delete-att %1 e %2)
               m
               [:lock :seen-locked?])
-      (add-world-text (entity-world-text m e "*unlocked*" color/green))))
+      (add-world-text (entity-world-text m e "*unlocked*" color/green))
+      (log (str (att m a :name "???") " unlocked the door"))))
 
 (defn open
   "Opens the door"
-  [m e]
+  [m a e]
   (cond
-    (att m e :seen-locked?) (unlock m e)
+    (att m e :seen-locked?) (unlock m a e)
 
     (locked? m e)
     (-> (add-world-text m (entity-world-text m e "*locked*" color/white))
@@ -924,7 +930,7 @@
   [m a b]
   (if (open? m b)
     (close m b)
-    (open m b)))
+    (open m a b)))
 
 (def default-cell-size
   "The default cell size used by the game"

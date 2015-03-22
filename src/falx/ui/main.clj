@@ -54,18 +54,6 @@
   (let [[x y _ h] (if (< n 3) (left-buffer game) (right-buffer game))]
     (tuple x (+ y h -160 (* (mod n 3) -192)) 128 160)))
 
-(defn player-buffers
-  "Returns a seq of the player buffers"
-  [game]
-  (map #(player-buffer game %) (range 6)))
-
-
-(defn initiative-buffer
-  "Returns the initiative buffer for the 'nth' entity"
-  [game n]
-  (let [[x y] (game-buffer game)]
-    (tuple (+ x (* (inc n) 32)) y 32 32)))
-
 (defn mouse-in-game?
   "Is the mouse currently in the game buffer?"
   [game]
@@ -232,10 +220,17 @@
     (when-let [player (player game n)]
       (draw-player! game player (player-buffer game n)))))
 
+(defn draw-log!
+  [game]
+  (let [[x y w h] (log-buffer game)]
+    (doseq [[i text] (map-indexed tuple (take 11 (:log game)))]
+      (g/draw-text! text (+ x 6) (+ y h (+ -6 (* i -16)))))))
+
 
 (defn draw!
   [game]
   (draw-buffers! game)
   (draw-bottom-right-buttons! game)
+  (draw-log! game)
   (draw-players! game)
   (draw-debug! game))
