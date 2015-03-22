@@ -34,10 +34,18 @@
   [game]
   (tuple (- (width game) (* 4 32)) 0 (* 4 32) (height game)))
 
+(defn bottom-left-buffer
+  [game]
+  (tuple 0 0 (* 4 32) (* 6 32)))
+
 (defn bottom-right-buffer
   "Returns the bottom right buffer rect relative to the current screen origin"
   [game]
   (tuple (- (width game) (* 4 32)) 0 (* 4 32) (* 6 32)))
+
+(defn log-buffer
+  [game]
+  (tuple (- (width game) (* 18 32)) 0 (* 14 32) (* 6 32)))
 
 (defn player-buffer
   "Returns the buffer relevant to the screen origin
@@ -176,6 +184,10 @@
   (let [[x y w h] (bottom-buffer game)]
     (draw-black! x y w h)
     (draw-blanks! 0 h w 32 32 32))
+  (let [[x y w h] (log-buffer game)]
+    (draw-blanks! (- x 32) y 32 h))
+  (let [[x y w h] (bottom-left-buffer game)]
+    (draw-blanks! w y 32 h))
   (let [[x y w h] (bottom-right-buffer game)]
     (draw-blanks! (- x 32) y 32 h)))
 
