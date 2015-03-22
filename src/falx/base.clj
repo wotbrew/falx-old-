@@ -884,18 +884,30 @@
 (defn locked?
   "Is the door locked?"
   [m e]
-  (boolean (att m e :locked)))
+  (boolean (att m e :lock)))
+
+(defn unlock
+  [m e]
+  (-> (reduce #(delete-att %1 e %2)
+              m
+              [:lock :seen-locked?])
+      (add-world-text (entity-world-text m e "*unlocked*" color/green))))
 
 (defn open
   "Opens the door"
   [m e]
-  (if (locked? m e)
-    (add-world-text m (entity-world-text m e "*locked*" color/white))
-    (set-att m e
-             :sprite (att m e :open-sprite)
-             :open? true
-             :solid? false
-             :opaque? false)))
+  (cond
+    (att m e :seen-locked?) (unlock m e)
+
+    (locked? m e)
+    (-> (add-world-text m (entity-world-text m e "*locked*" color/white))
+        (set-att e :seen-locked? true))
+
+    :else (set-att m e
+                   :sprite (att m e :open-sprite)
+                   :open? true
+                   :solid? false
+                   :opaque? false)))
 
 (defn close
   "Closes the door"
