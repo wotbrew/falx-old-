@@ -15,9 +15,9 @@
 (defn game-buffer
   "Returns the game buffer rect relative to the current screen origin"
   [game]
-  (tuple (* 5 32) (* 7 32)
-         (- (width game) (* 10 32))
-         (- (height game) (* 7 32))))
+  (tuple (* 4 32) (* 6 32)
+         (- (width game) (* 9 32))
+         (- (height game) (* 6 32))))
 
 (defn left-buffer
   "Returns the left buffer rect relative to the current screen origin."
@@ -52,13 +52,12 @@
    for the given player (by n)"
   [game n]
   (let [[x y _ h] (if (< n 3) (left-buffer game) (right-buffer game))]
-    (tuple x (+ y h -160 (* (mod n 3) -192)) 128 160)))
+    (tuple x (+ y h -192 (* (mod n 3) -192)) 128 192)))
 
 (defn mouse-in-game?
   "Is the mouse currently in the game buffer?"
   [game]
   (mouse-in? game (game-buffer game)))
-
 
 (defn player-n-having-mouse
   "Returns the player (index) for that buffer which
@@ -165,19 +164,19 @@
   [game]
   (let [[x y w h] (left-buffer game)]
     (draw-black! x y w h)
-    (draw-blanks! w 0 32 h 32 32))
+    (draw-box! color/gray w 0 1 h))
   (let [[x y w h] (right-buffer game)]
     (draw-black! x y w h)
-    (draw-blanks! (- x 32) 0 32 h 32 32))
+    (draw-box! color/gray x 0 1 h))
   (let [[x y w h] (bottom-buffer game)]
     (draw-black! x y w h)
-    (draw-blanks! 0 h w 32 32 32))
+    (draw-box! color/gray 0 h w 1))
   (let [[x y w h] (log-buffer game)]
-    (draw-blanks! (- x 32) y 32 h))
+    (draw-box! color/gray x y 1 h))
   (let [[x y w h] (bottom-left-buffer game)]
-    (draw-blanks! w y 32 h))
+    (draw-box! color/gray w y 1 h))
   (let [[x y w h] (bottom-right-buffer game)]
-    (draw-blanks! (- x 32) y 32 h)))
+    (draw-box! color/gray x y 1 h)))
 
 (defn draw-turn-button!
   [game [x y w h]]
