@@ -9,6 +9,7 @@
             [gdx-2d.color :as color]
             [clojure.core.memoize :as mem]
             [clojure.string :as str]
+            [falx.skill :as skill]
             [falx.state :as state]))
 
 
@@ -37,6 +38,10 @@
 (defn bottom-left-buffer
   [game]
   (tuple 0 0 (* 4 32) (* 6 32)))
+
+(defn action-buffer
+  [game]
+  (tuple (* 4 32) 0 (- (width game) (* 18 32) (* 4 32)) (* 6 32)))
 
 (defn bottom-right-buffer
   "Returns the bottom right buffer rect relative to the current screen origin"
@@ -225,11 +230,28 @@
     (doseq [[i text] (map-indexed tuple (take 11 (:log game)))]
       (g/draw-text! text (+ x 6) (+ y h (+ -6 (* i -16)))))))
 
+(defn draw-tabs!
+  [game]
+  (let [[x y w h] (action-buffer game)]
+    (draw-button! game :boost "Skill" x (+ y h -32) 96 32)
+    (draw-button! game :book "Spell" (+ x 96) (+ y h -32) 96 32)
+    (draw-button! game :potion "Item" (+ x 96 96) (+ y h -32) 96 32)))
+
+(defn draw-skill-tab!
+  [game]
+  (let [[x y w h] (action-buffer game)
+        y (+ y h -64)]
+    (doseq [[i s] skill/map-usable-indexed
+            :let [x (+ x (* i 32))]]
+      (draw-hover-sprite! game (:sprite s) x y 32 32)
+      (draw-mouse-hover-text-in! game (name (:name s)) x y 32 32))))
 
 (defn draw!
   [game]
   (draw-buffers! game)
   (draw-bottom-right-buttons! game)
   (draw-log! game)
+  (draw-tabs! game)
+  (draw-skill-tab! game)
   (draw-players! game)
   (draw-debug! game))

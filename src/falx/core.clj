@@ -264,6 +264,27 @@
     (not (explored-by-player-at? game (:mouse-cell game))) nil
     (interactable-at-mouse game) (interactable-overlay-sprite game)))
 
+(defn interactable-overlay-text
+  [game]
+  (let [e (interactable-at-mouse game)]
+    (cond (door? game e)
+          (str (when (locked? game e) "Locked ")
+               (if (open? game e)
+                 "door (open)"
+                 "door (closed)")))))
+
+(defn creature-overlay-text
+  [game]
+  (let [e (creature-at-mouse game)]
+    (str (att game e :name))))
+
+(defn mouse-overlay-text
+  [game]
+  (cond
+    (not (explored-by-player-at? game (:mouse-cell game))) nil
+    (creature-at-mouse game) (creature-overlay-text game)
+    (interactable-at-mouse game) (interactable-overlay-text game)))
+
 (defn draw-mouse!
   [game]
   (let [[x y] (:mouse-screen game)
@@ -273,7 +294,9 @@
       (let [sprite (or (mouse-sprite game) :mouse)]
         (g/draw-point! sprite x (- h y cs))
         (when-let [overlay (mouse-overlay-sprite game)]
-          (g/draw-point! overlay (+ x (/ cs 4)) (- h y cs (/ cs 4))))))))
+          (g/draw-point! overlay (+ x (/ cs 4)) (- h y cs (/ cs 4))))
+        (when-let [text (mouse-overlay-text game)]
+          (draw-hover-text! text (+ x (/ cs 2)) (- h y cs (/ cs -4))))))))
 
 
 (defn draw-ui!

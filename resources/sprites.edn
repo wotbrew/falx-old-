@@ -41,10 +41,22 @@
  :red-flag ["Misc" [64 64 32 32]]
 
  :blank ["Gui" [0 0 32 32]]
-
+ :block ["Gui" [32 0 32 32]]
+ :helm ["Gui" [64 0 32 32]]
+ :char ["Gui" [96 0 32 32]]
+ :inventory ["Gui" [128 0 32 32]]
+ :book ["Gui" [160 0 32 32]]
+ :bulb ["Gui" [192 0 32 32]]
+ :wait ["Gui" [224 0 32 32]]
+ :map ["Gui" [256 0 32 32]]
+ :scroll-up ["Gui" [0 32 32 32]]
+ :scroll-down ["Gui" [32 32 32 32]]
  :turn ["Gui" [64 32 32 32]]
  :combat ["Gui" [96 32 32 32]]
  :peace ["Gui" [128 32 32 32]]
+ :potion ["Gui" [160 32 32 32]]
+ :boost ["Gui" [192 32 32 32]]
+ :scroll ["Gui" [224 32 32 32]]
 
  :mouse ["Mouse" [0 0 32 32]]
  :mouse-select ["Mouse" [32 0 32 32]]

@@ -66,6 +66,18 @@
           my (- sh my)]
       (rect/pt-in? x y w h mx my))))
 
+(defn draw-mouse-hover-text-in!
+  [game text x y w h]
+  (when (mouse-in? game x y w h)
+    (draw-hover-text! text)))
+
+(defn draw-hover-sprite!
+  [game sprite x y w h]
+  (if (mouse-in? game x y w h)
+    (g/draw-quad! sprite x y w h)
+    (g/with-color color/gray
+                  (g/draw-quad! sprite x y w h))))
+
 (defn draw-button!
   [game sprite text x y w h]
   (draw-box! (if (mouse-in? game x y w h)
